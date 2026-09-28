@@ -123,4 +123,26 @@ final class CsatReportTest extends CIUnitTestCase
         $hash = $security->getHash();
         return $this->withSession(['user_id' => $this->adminId, $name => $hash])->post($path, array_merge($data, [$name => $hash]));
     }
+
+    public function testFuzzySearchKeepsTotalsChartsAndExclusionsConsistent(): void
+    {
+        foreach (['1' => 'SN Ahmad Syafiq', '2' => 'SN Ahmad Sharif', '3' => 'SN Amira Syafiq'] as $id => $name) {
+            $this->db->table('responses')->where('csat_id', (string) $id)->update(['agent_name' => $name]);
+        }
+        $service = new CsatReport($this->db);
+        $report = $service->build($this->importId, $service->filters(['agent' => 'SYFIQ']));
+        self::assertSame(2, $report['summary']['total']);
+        self::assertSame(2, $report['matchedNameCount']);
+        self::assertSame(2, $report['agentCount']);
+        self::assertSame(50.0, $report['summary']['score']);
+        self::assertSame(2, (int) $report['groups']['channels'][0]['total']);
+        $report = $service->build($this->importId, $service->filters(['agent' => 'syafiq ahmad', 'team' => 'A']));
+        self::assertSame(1, $report['summary']['total']);
+        $report = $service->build($this->importId, $service->filters(['agent' => 'ahmad']));
+        self::assertSame(1, $report['summary']['total']);
+        $report = $service->build($this->importId, $service->filters(['agent' => 'ahmad', 'scope' => 'all']));
+        self::assertSame(2, $report['summary']['total']);
+        $report = $service->build($this->importId, $service->filters(['agent' => '%_']));
+        self::assertSame(0, $report['summary']['total']);
+    }
 }

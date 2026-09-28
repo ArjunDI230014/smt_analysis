@@ -8,6 +8,7 @@ use DomainException;
 
 class CsatReport
 {
+    private array $matchedNames = [];
     public function __construct(private ?BaseConnection $db = null)
     {
         $this->db ??= db_connect();
@@ -55,13 +56,21 @@ class CsatReport
             $query->where('is_excluded', $filters['scope'] === 'excluded' ? 1 : 0);
         }
         if ($filters['agent'] !== '') {
-            $query->like('agent_name', $filters['agent']);
+            if ($this->matchedNames === []) {
+                $query->where('id', -1);
+            } else {
+                $query->whereIn('agent_name', $this->matchedNames);
+            }
         }
         return $query;
     }
 
     public function build(int $importId, array $filters, int $page = 1): array
     {
+        $withoutAgent = array_merge($filters, ['agent' => '']);
+        $agentNames = array_column($this->query($importId, $withoutAgent)->select('agent_name')->distinct()->orderBy('agent_name')->get()->getResultArray(), 'agent_name');
+        $this->matchedNames = array_values(array_filter($agentNames, static fn ($name) => AgentSearch::matches($name, $filters['agent'])));
+        $matchedNameCount = count($this->matchedNames);
         $summary = $this->query($importId, $filters)
             ->select('COUNT(*) AS total, SUM(good) AS good, SUM(bad) AS bad, SUM(is_excluded) AS flagged, AVG(handling_seconds) AS handling, COUNT(handling_seconds) AS handling_count', false)
             ->get()->getRowArray();
@@ -96,7 +105,7 @@ class CsatReport
         foreach (['team', 'channel'] as $column) {
             $options[$column] = array_column($this->db->table('responses')->select($column)->distinct()->where('import_id', $importId)->orderBy($column)->get()->getResultArray(), $column);
         }
-        return compact('summary', 'groups', 'agents', 'agentCount', 'pages', 'page', 'options');
+        return compact('summary', 'groups', 'agents', 'agentCount', 'pages', 'page', 'options', 'agentNames', 'matchedNameCount');
     }
 
     private function score(array $row): ?float

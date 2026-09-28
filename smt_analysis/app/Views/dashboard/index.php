@@ -11,10 +11,16 @@
         <label>To<input type="date" name="to" value="<?= esc($filters['to']) ?>"></label>
         <?php foreach (['team' => 'Team', 'channel' => 'Channel'] as $key => $label): ?><label><?= $label ?><select name="<?= $key ?>"><option value="">All <?= strtolower($label) ?>s</option><?php foreach ($options[$key] as $option): ?><option value="<?= esc($option) ?>" <?= $filters[$key] === $option ? 'selected' : '' ?>><?= esc($option) ?></option><?php endforeach ?></select></label><?php endforeach ?>
         <label>Row inclusion<select name="scope"><?php foreach (['included' => 'Unflagged rows only (default)', 'all' => 'All rows', 'excluded' => 'Flagged rows only'] as $key => $label): ?><option value="<?= $key ?>" <?= $filters['scope'] === $key ? 'selected' : '' ?>><?= $label ?></option><?php endforeach ?></select></label>
-        <label>Agent search<input type="search" name="agent" value="<?= esc($filters['agent']) ?>" placeholder="Search name" maxlength="255"></label>
+        <div class="agent-search-field">
+            <label for="agent-search">Agent search</label>
+            <input id="agent-search" type="search" name="agent" value="<?= esc($filters['agent']) ?>" placeholder="Part of a name…" maxlength="255" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="agent-suggestions" aria-describedby="agent-search-hint">
+            <span class="agent-search-hint" id="agent-search-hint" role="status">Partial names, any word order, or small typos.</span>
+            <ul class="agent-suggestions" id="agent-suggestions" role="listbox" aria-label="Matching agents" hidden></ul>
+        </div>
     </div>
     <div class="filter-footer"><span class="small muted">Report dates: <?= esc($import['date_from']) ?> – <?= esc($import['date_to']) ?></span><div><a class="text-link" href="<?= site_url('dashboard') . '?import=' . $import['id'] ?>">Reset</a><button class="button small-button" type="submit">Apply filters</button></div></div>
 </form>
+<?php if ($filters['agent'] !== ''): ?><p class="search-summary">Search: <strong><?= esc($filters['agent']) ?></strong> · <?= $matchedNameCount ?> matching agent names within these filters. Scores and charts include all matching responses.</p><?php endif ?>
 <div class="section-heading"><h2>Performance overview</h2><span class="small muted"><?= number_format($summary['total']) ?> of <?= number_format($import['row_count']) ?> responses</span></div>
 <section class="kpi-grid" aria-label="Key performance indicators">
     <article class="kpi primary"><div>CSAT score <span>↗</span></div><strong><?= $summary['score'] !== null ? number_format($summary['score'], 2) . '<small>%</small>' : '—' ?></strong><p>Good ÷ (Good + Bad)</p></article>
@@ -40,6 +46,10 @@
 <?php endif ?>
 <?= $this->endSection() ?>
 <?= $this->section('scripts') ?>
+<?php if ($import): ?>
+<script id="agent-names" type="application/json"><?= json_encode($agentNames, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR) ?></script>
+<script src="<?= base_url('assets/agent-search.js') ?>" defer></script>
+<?php endif ?>
 <?php if ($import && $summary['total'] > 0): ?>
 <script id="report-data" type="application/json"><?= json_encode(['summary' => $summary, 'groups' => $groups], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR) ?></script>
 <script src="<?= base_url('assets/vendor/chart.umd.min.js') ?>" defer></script>

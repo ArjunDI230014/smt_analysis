@@ -64,6 +64,10 @@ Relationships: one user uploads many imports; one import owns many responses. CS
 
 ## Score and charts
 
+Use the bottom-right Dark mode / Light mode toggle to change appearance. The browser remembers your choice, and charts follow the selected theme.
+
+Agent search accepts case-insensitive partial names, accents, words in any order, and small spelling mistakes (one edit for words of 4–6 characters, two for longer words). All entered words must match. Suggestions appear as you type; press Enter to search all similar names, or select a suggestion with the mouse or arrow keys and Enter. Suggestions reflect the last applied report/date/team/channel/inclusion filters. Apply filters after changing those settings to refresh available agents. The results show the number of matching names, and all scores and charts use the same matches.
+
 **CSAT = sum(Good) / (sum(Good) + sum(Bad)) × 100**, displayed to two decimal places. No matching responses displays an unavailable score rather than 0%.
 
 Charts show daily CSAT, Good/Bad mix, CSAT for the 12 largest teams by response count, and response counts by **CSAT submission channel**. Team names remain as supplied; case variants are not merged. Agent performance groups by agent name and team, paginated in groups of 25. Date, team, channel, agent search, and row-inclusion filters affect all displayed results.

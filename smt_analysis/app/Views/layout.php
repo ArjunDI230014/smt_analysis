@@ -4,9 +4,12 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= esc($title) ?> · SMT Analytics</title>
+    <script src="<?= base_url('assets/theme.js') ?>"></script>
     <link rel="stylesheet" href="<?= base_url('assets/app.css') ?>">
+    <link rel="stylesheet" href="<?= base_url('assets/enhancements.css') ?>">
 </head>
 <body>
+<button class="theme-toggle" id="theme-toggle" type="button" aria-pressed="false">Dark mode</button>
 <?php $currentUser = session('user'); $path = trim(uri_string(), '/'); ?>
 <?php if ($currentUser): ?>
 <aside class="sidebar">

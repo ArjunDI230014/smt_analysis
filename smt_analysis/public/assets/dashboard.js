@@ -26,5 +26,29 @@
             type: 'bar', data: { labels: groups.channels.map(row => row.label), datasets: [{ label: 'Good', data: groups.channels.map(row => Number(row.good)), backgroundColor: green, borderRadius: 4, maxBarThickness: 50 }, { label: 'Bad', data: groups.channels.map(row => Number(row.bad)), backgroundColor: orange, borderRadius: 4, maxBarThickness: 50 }] },
             options: { ...base(), scales: { x: { ...axes.x, stacked: true }, y: { beginAtZero: true, stacked: true, grid: { color: '#edf1ee' }, border: { display: false }, ticks: { precision: 0 } } }, plugins: { legend: { display: true, position: 'bottom' } } }
         });
+        const applyTheme = () => {
+            const styles = getComputedStyle(document.documentElement);
+            const text = styles.getPropertyValue('--chart-text').trim();
+            const grid = styles.getPropertyValue('--chart-grid').trim();
+            const accent = styles.getPropertyValue('--chart-green').trim();
+            const surface = styles.getPropertyValue('--surface').trim();
+            Object.values(Chart.instances).forEach(chart => {
+                chart.options.color = text;
+                chart.options.plugins.legend.labels.color = text;
+                Object.values(chart.options.scales || {}).forEach(scale => {
+                    scale.ticks.color = text;
+                    scale.grid.color = grid;
+                });
+                if (chart.config.type === 'doughnut') {
+                    chart.data.datasets[0].backgroundColor = [accent, orange];
+                    chart.data.datasets[0].borderColor = surface;
+                } else if (chart.config.type === 'line') {
+                    Object.assign(chart.data.datasets[0], {borderColor:accent, pointBackgroundColor:accent, backgroundColor:accent + '18'});
+                } else { chart.data.datasets[0].backgroundColor = accent; }
+                chart.update('none');
+            });
+        };
+        applyTheme();
+        document.addEventListener('themechange', applyTheme);
     } catch (exception) { error.hidden = false; }
 })();

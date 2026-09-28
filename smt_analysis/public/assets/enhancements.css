@@ -1,4 +1,9 @@
 :root { --surface: #fff; --chart-text: #718079; --chart-grid: #edf1ee; --chart-green: #18796a; }
+.brand.brand-logo { flex-direction: column; align-items: flex-start; gap: 7px; }
+.brand-logo img { display: block; width: 156px; height: auto; max-width: 100%; padding: 6px; background: #fff; border-radius: 6px; }
+.brand-caption { font-size: 9px; font-weight: 600; letter-spacing: 2px; color: var(--muted); padding-left: 6px; }
+.login-story .brand-caption { color: #c0d9c9; }
+@media(max-width:850px) { .sidebar .brand-logo img { width: 125px; } .sidebar .brand-caption { display: none; } }
 .theme-toggle { position: fixed; right: 28px; bottom: 22px; z-index: 30; border: 1px solid var(--line); border-radius: 24px; background: var(--surface); color: var(--ink); padding: 10px 16px; box-shadow: 0 3px 15px #0002; font-size: 12px; }
 .agent-search-field { position: relative; }
 .agent-search-hint { display: block; margin-top: 6px; font-size: 10px; color: var(--muted); font-weight: 400; }

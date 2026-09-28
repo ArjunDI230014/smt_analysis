@@ -3,7 +3,8 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title><?= esc($title) ?> · SMT Analytics</title>
+    <title><?= esc($title) ?> · Summit Analytics</title>
+    <link rel="icon" type="image/png" href="<?= base_url('assets/images/summit-logo.png') ?>">
     <script src="<?= base_url('assets/theme.js') ?>"></script>
     <link rel="stylesheet" href="<?= base_url('assets/app.css') ?>">
     <link rel="stylesheet" href="<?= base_url('assets/enhancements.css') ?>">
@@ -13,7 +14,7 @@
 <?php $currentUser = session('user'); $path = trim(uri_string(), '/'); ?>
 <?php if ($currentUser): ?>
 <aside class="sidebar">
-    <a class="brand" href="<?= site_url('/') ?>"><span class="brand-mark">s.</span><span>SMT <strong>Analytics</strong><small>CUSTOMER EXPERIENCE</small></span></a>
+    <a class="brand brand-logo" href="<?= site_url('/') ?>" aria-label="Summit Analytics home"><img src="<?= base_url('assets/images/summit-logo.png') ?>" alt="Summit" width="136" height="50"><span class="brand-caption">CSAT ANALYTICS</span></a>
     <p class="nav-caption">WORKSPACE</p>
     <nav aria-label="Main navigation">
         <a class="<?= in_array($path, ['', 'dashboard'], true) ? 'active' : '' ?>" href="<?= site_url('dashboard') ?>"><span aria-hidden="true">▦</span> Overview</a>

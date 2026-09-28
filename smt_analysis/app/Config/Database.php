@@ -30,12 +30,12 @@ class Database extends Config
         'username'     => '',
         'password'     => '',
         'database'     => '',
-        'DBDriver'     => 'MySQLi',
+        'DBDriver'     => 'SQLite3',
         'DBPrefix'     => '',
         'pConnect'     => false,
         'DBDebug'      => true,
         'charset'      => 'utf8mb4',
-        'DBCollat'     => 'utf8mb4_general_ci',
+        'DBCollat'     => 'utf8mb4_bin',
         'swapPre'      => '',
         'encrypt'      => false,
         'compress'     => false,
@@ -193,6 +193,12 @@ class Database extends Config
     public function __construct()
     {
         parent::__construct();
+
+        if ($this->default['DBDriver'] === 'SQLite3' && $this->default['database'] === '') {
+            $this->default['database'] = WRITEPATH . 'csat.sqlite';
+            $this->default['foreignKeys'] = true;
+            $this->default['busyTimeout'] = 5000;
+        }
 
         // Ensure that we always set the database group to 'tests' if
         // we are currently running an automated test suite, so that

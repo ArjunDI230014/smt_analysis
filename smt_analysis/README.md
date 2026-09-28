@@ -1,4 +1,12 @@
-# CodeIgniter 4 Application Starter
+# SMT Analytics — Daily CSAT
+
+The application includes administrator/user access, imports only the **Daily CSAT** Excel worksheet, and presents interactive Chart.js dashboards. Flagged rows are excluded by default.
+
+See **[SETUP.md](SETUP.md)** for startup, account creation, upload requirements, and tests. On Windows, run `start.ps1` from this folder.
+
+---
+
+## Original CodeIgniter starter information
 
 ## What is CodeIgniter?
 

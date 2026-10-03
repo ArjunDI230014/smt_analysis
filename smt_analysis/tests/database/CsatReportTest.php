@@ -239,6 +239,35 @@ final class CsatReportTest extends CIUnitTestCase
         return $this->withSession(['user_id' => $this->adminId, $name => $hash])->post($path, array_merge($data, [$name => $hash]));
     }
 
+    public function testUserDirectoryPaginatesTwoHundredUsersAndSearchesAcrossPages(): void
+    {
+        $rows = [];
+        $hash = password_hash('test-password-123', PASSWORD_DEFAULT);
+        for ($i = 1; $i <= 200; $i++) {
+            $rows[] = ['name' => sprintf('Member %03d', $i), 'email' => sprintf('member%03d@example.test', $i),
+                'password_hash' => $hash, 'role' => 'user', 'active' => 1, 'archived' => $i === 200 ? 1 : 0, 'created_at' => '2026-10-03 10:00:00'];
+        }
+        $this->db->table('users')->insertBatch($rows);
+        $first = $this->withSession(['user_id' => $this->adminId])->get('/admin/users');
+        $first->assertOK();
+        $first->assertSee('Showing 1–20 of 202');
+        $first->assertSee('Member 020');
+        $first->assertDontSee('Member 021');
+        self::assertStringContainsString('id="user-results"', $first->getBody());
+        self::assertStringContainsString('assets/user-search.js', $first->getBody());
+        $second = $this->withSession(['user_id' => $this->adminId])->get('/admin/users?page=2');
+        $second->assertSee('Member 021');
+        $second->assertDontSee('Member 020');
+        $search = $this->withSession(['user_id' => $this->adminId])->get('/admin/users?q=member200%40example.test&status=archived&page=999');
+        $search->assertSee('Member 200');
+        $search->assertSee('Showing 1–1 of 1');
+        $search->assertDontSee('Member 199');
+        $this->withSession(['user_id' => $this->adminId])->get('/admin/users?q=member200%40example.test&status=active')->assertSee('No matching accounts');
+        $partial = $this->withSession(['user_id' => $this->adminId])->get('/admin/users?q=200%20Mem');
+        $partial->assertSee('Member 200');
+        $partial->assertDontSee('Member 199');
+    }
+
     public function testFuzzySearchKeepsTotalsChartsAndExclusionsConsistent(): void
     {
         foreach (['1' => 'SN Ahmad Syafiq', '2' => 'SN Ahmad Sharif', '3' => 'SN Amira Syafiq'] as $id => $name) {

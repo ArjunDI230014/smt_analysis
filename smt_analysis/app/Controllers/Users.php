@@ -8,7 +8,30 @@ class Users extends BaseController
 {
     public function index()
     {
-        return view('users/index', ['title' => 'Manage users', 'users' => (new UserModel())->select('id, name, email, role, active, archived, created_at')->orderBy('id', 'DESC')->findAll()]);
+        $input = $this->request->getGet();
+        $search = is_scalar($input['q'] ?? '') ? mb_substr(trim((string) ($input['q'] ?? '')), 0, 190) : '';
+        $status = is_string($input['status'] ?? null) ? $input['status'] : 'all';
+        if (!in_array($status, ['all', 'active', 'inactive', 'archived'], true)) {
+            $status = 'all';
+        }
+        $query = db_connect()->table('users');
+        if ($search !== '') {
+            foreach (preg_split('/\s+/u', $search) as $term) {
+                $query->groupStart()->like('name', $term)->orLike('email', $term)->groupEnd();
+            }
+        }
+        if ($status === 'archived') {
+            $query->where('archived', 1);
+        } elseif ($status !== 'all') {
+            $query->where('archived', 0)->where('active', $status === 'active' ? 1 : 0);
+        }
+        $total = (clone $query)->countAllResults();
+        $perPage = 20;
+        $pages = max(1, (int) ceil($total / $perPage));
+        $requestedPage = is_scalar($input['page'] ?? 1) ? filter_var($input['page'] ?? 1, FILTER_VALIDATE_INT) : 1;
+        $page = max(1, min($pages, $requestedPage ?: 1));
+        $users = $query->select('id, name, email, role, active, archived, created_at')->orderBy('name')->orderBy('id')->limit($perPage, ($page - 1) * $perPage)->get()->getResultArray();
+        return view('users/index', array_merge(compact('users', 'search', 'status', 'total', 'page', 'pages', 'perPage'), ['title' => 'Manage users']));
     }
 
     public function store()

@@ -121,10 +121,39 @@ final class CsatReportTest extends CIUnitTestCase
 
     public function testViewerCanViewDashboard(): void
     {
+        $this->db->table('responses')->where('csat_id', '1')->update(['agent_email' => 'viewer@example.test']);
         $result = $this->withSession(['user_id' => $this->viewerId])->get('/dashboard');
         $result->assertOK();
-        $result->assertSee('50.00');
+        $result->assertSee('100.00');
+        $result->assertSee('Agent 1');
+        $result->assertDontSee('Agent 3');
+        $result->assertDontSee('Agent search');
         $result->assertDontSee('Manage users');
+    }
+
+    public function testPersonalReportScopesAllDataByEmailEvenWithDuplicateNames(): void
+    {
+        $this->db->table('responses')->where('csat_id', '1')->update(['agent_email' => 'viewer@example.test']);
+        $this->db->table('responses')->where('csat_id', '3')->update(['agent_name' => 'Agent 1', 'agent_email' => 'other@example.test', 'channel' => 'Other channel']);
+        $service = new CsatReport($this->db, 'viewer@example.test');
+        $report = $service->build($this->importId, $service->filters(['scope' => 'all']));
+        self::assertSame(1, $report['summary']['total']);
+        self::assertSame(100.0, $report['summary']['score']);
+        self::assertSame(['A'], $report['options']['team']);
+        self::assertSame(['Chat'], $report['options']['channel']);
+        self::assertSame(['Agent 1'], $report['agentNames']);
+        self::assertCount(1, $report['groups']['trend']);
+        self::assertSame(1, $report['agentCount']);
+        $this->withSession(['user_id' => $this->viewerId])->get('/dashboard?agent=Agent%203&scope=all')->assertSee('100.00');
+    }
+
+    public function testUnlinkedViewerReceivesNoOtherPeoplesData(): void
+    {
+        $result = $this->withSession(['user_id' => $this->viewerId])->get('/dashboard?scope=all');
+        $result->assertOK();
+        $result->assertSee('No responses match');
+        $result->assertDontSee('Agent 1');
+        $result->assertDontSee('Agent 3');
     }
 
     public function testDisabledUserCannotAccessDashboard(): void

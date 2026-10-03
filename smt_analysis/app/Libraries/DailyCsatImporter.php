@@ -90,7 +90,7 @@ class DailyCsatImporter
                 }
                 $ids[$id] = true;
                 $rawJson = json_encode($raw, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE);
-                AgentRoster::identity($raw);
+                $identity = AgentRoster::identity($raw);
                 if (strlen($rawJson) > 60000) {
                     throw new DomainException("Row {$r}: the row contains too much text to import.");
                 }
@@ -103,6 +103,7 @@ class DailyCsatImporter
                     'response_date' => $this->parseDate($raw['Date'], $r),
                     'team' => $this->label($raw['Team'], 120, $r, 'Team'),
                     'agent_name' => $this->label($raw['agent_name'], 255, $r, 'agent_name'),
+                    'agent_email' => $identity['email'] ?? null,
                     'channel' => $this->label($raw['csat_submission_channel_name'], 120, $r, 'csat_submission_channel_name'),
                     'category' => $this->label($raw['l1_name'] ?? '', 255, $r, 'l1_name'),
                     'csat_id' => $id,

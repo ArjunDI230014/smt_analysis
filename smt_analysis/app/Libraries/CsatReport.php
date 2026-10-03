@@ -9,7 +9,7 @@ use DomainException;
 class CsatReport
 {
     private array $matchedNames = [];
-    public function __construct(private ?BaseConnection $db = null)
+    public function __construct(private ?BaseConnection $db = null, private ?string $ownerEmail = null)
     {
         $this->db ??= db_connect();
     }
@@ -47,6 +47,9 @@ class CsatReport
     private function query(int $importId, array $filters): BaseBuilder
     {
         $query = $this->db->table('responses')->where('import_id', $importId);
+        if ($this->ownerEmail !== null) {
+            $query->where('agent_email', strtolower(trim($this->ownerEmail)));
+        }
         foreach (['from' => 'response_date >=', 'to' => 'response_date <=', 'team' => 'team', 'channel' => 'channel'] as $key => $column) {
             if ($filters[$key] !== '') {
                 $query->where($column, $filters[$key]);
@@ -103,7 +106,11 @@ class CsatReport
         unset($agent);
         $options = [];
         foreach (['team', 'channel'] as $column) {
-            $options[$column] = array_column($this->db->table('responses')->select($column)->distinct()->where('import_id', $importId)->orderBy($column)->get()->getResultArray(), $column);
+            $query = $this->db->table('responses')->select($column)->distinct()->where('import_id', $importId);
+            if ($this->ownerEmail !== null) {
+                $query->where('agent_email', strtolower(trim($this->ownerEmail)));
+            }
+            $options[$column] = array_column($query->orderBy($column)->get()->getResultArray(), $column);
         }
         return compact('summary', 'groups', 'agents', 'agentCount', 'pages', 'page', 'options', 'agentNames', 'matchedNameCount');
     }

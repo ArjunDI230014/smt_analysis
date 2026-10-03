@@ -11,12 +11,12 @@
         <label>To<input type="date" name="to" value="<?= esc($filters['to']) ?>"></label>
         <?php foreach (['team' => 'Team', 'channel' => 'Channel'] as $key => $label): ?><label><?= $label ?><select name="<?= $key ?>"><option value="">All <?= strtolower($label) ?>s</option><?php foreach ($options[$key] as $option): ?><option value="<?= esc($option) ?>" <?= $filters[$key] === $option ? 'selected' : '' ?>><?= esc($option) ?></option><?php endforeach ?></select></label><?php endforeach ?>
         <label>Row inclusion<select name="scope"><?php foreach (['included' => 'Unflagged rows only (default)', 'all' => 'All rows', 'excluded' => 'Flagged rows only'] as $key => $label): ?><option value="<?= $key ?>" <?= $filters['scope'] === $key ? 'selected' : '' ?>><?= $label ?></option><?php endforeach ?></select></label>
-        <div class="agent-search-field">
+        <?php if (!$personal): ?><div class="agent-search-field">
             <label for="agent-search">Agent search</label>
             <input id="agent-search" type="search" name="agent" value="<?= esc($filters['agent']) ?>" placeholder="Part of a name…" maxlength="255" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="agent-suggestions" aria-describedby="agent-search-hint">
             <span class="agent-search-hint" id="agent-search-hint" role="status">Partial names, any word order, or small typos.</span>
             <ul class="agent-suggestions" id="agent-suggestions" role="listbox" aria-label="Matching agents" hidden></ul>
-        </div>
+        </div><?php endif ?>
     </div>
     <div class="filter-footer"><span class="small muted">Report dates: <?= esc($import['date_from']) ?> – <?= esc($import['date_to']) ?></span><div><a class="text-link" href="<?= site_url('dashboard') . '?import=' . $import['id'] ?>">Reset</a><button class="button small-button" type="submit">Apply filters</button></div></div>
 </form>
@@ -46,7 +46,7 @@
 <?php endif ?>
 <?= $this->endSection() ?>
 <?= $this->section('scripts') ?>
-<?php if ($import): ?>
+<?php if ($import && !$personal): ?>
 <script id="agent-names" type="application/json"><?= json_encode($agentNames, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR) ?></script>
 <script src="<?= base_url('assets/agent-search.js') ?>" defer></script>
 <?php endif ?>

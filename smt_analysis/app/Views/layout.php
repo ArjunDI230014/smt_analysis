@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="<?= base_url('assets/enhancements.css') ?>">
 </head>
 <body>
-<button class="theme-toggle" id="theme-toggle" type="button" aria-pressed="false">Dark mode</button>
+<button class="theme-toggle" id="theme-toggle" type="button" aria-pressed="false"><span class="theme-icon" aria-hidden="true">☾</span><span class="theme-label">Dark mode</span></button>
 <?php $currentUser = session('user'); $path = trim(uri_string(), '/'); ?>
 <?php if ($currentUser): ?>
 <aside class="sidebar">
@@ -25,7 +25,7 @@
     </nav>
     <div class="sidebar-note"><span class="status-dot"></span> Daily CSAT workspace<p>One worksheet.<br>A clearer view of your service.</p></div>
     <div class="profile"><span class="avatar"><?= esc(mb_strtoupper(mb_substr($currentUser['name'], 0, 1))) ?></span><div><strong><?= esc($currentUser['name']) ?></strong><small><?= $currentUser['role'] === 'admin' ? 'Administrator' : 'Viewer' ?></small></div></div>
-    <form action="<?= site_url('logout') ?>" method="post"><?= csrf_field() ?><button class="signout" type="submit">Sign out ↗</button></form>
+    <form class="signout-form" action="<?= site_url('logout') ?>" method="post"><?= csrf_field() ?><button class="signout" type="submit"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H5v14h4M9 12h12m-4-4 4 4-4 4"/></svg><span>Sign out</span></button></form>
 </aside>
 <?php endif ?>
 <main class="<?= $currentUser ? 'main' : 'auth-main' ?>">

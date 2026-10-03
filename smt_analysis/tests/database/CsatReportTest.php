@@ -68,6 +68,46 @@ final class CsatReportTest extends CIUnitTestCase
         self::assertNull($report['summary']['score']);
     }
 
+    public function testArchiveAndRestorePreserveResponsesAndDashboardVisibility(): void
+    {
+        $this->postAsAdmin('/admin/uploads/' . $this->importId . '/archive', [])->assertRedirectTo('/admin/uploads');
+        self::assertSame(1, (int) $this->db->table('imports')->where('id', $this->importId)->get()->getRowArray()['archived']);
+        self::assertSame(3, $this->db->table('responses')->where('import_id', $this->importId)->countAllResults());
+        try {
+            $this->withSession(['user_id' => $this->adminId])->get('/dashboard?import=' . $this->importId);
+            self::fail('Archived reports must be unavailable on the dashboard.');
+        } catch (\CodeIgniter\Exceptions\PageNotFoundException $e) {
+            self::assertSame(404, $e->getCode());
+        }
+        $this->withSession(['user_id' => $this->adminId])->get('/admin/uploads')->assertSee('Restore');
+        $this->postAsAdmin('/admin/uploads/' . $this->importId . '/restore', [])->assertRedirectTo('/admin/uploads');
+        $this->withSession(['user_id' => $this->adminId])->get('/dashboard?import=' . $this->importId)->assertOK();
+    }
+
+    public function testDeleteRemovesOnlySelectedSnapshotAndResponses(): void
+    {
+        $this->db->table('imports')->insert(['filename' => 'other.xlsx', 'file_hash' => str_repeat('b', 64), 'uploaded_by' => $this->adminId, 'row_count' => 0, 'date_from' => '2026-09-06', 'date_to' => '2026-09-07', 'created_at' => '2026-09-28 10:00:00']);
+        $otherId = (int) $this->db->insertID();
+        $this->postAsAdmin('/admin/uploads/' . $this->importId . '/delete', [])->assertRedirectTo('/admin/uploads');
+        self::assertSame(0, $this->db->table('imports')->where('id', $this->importId)->countAllResults());
+        self::assertSame(0, $this->db->table('responses')->where('import_id', $this->importId)->countAllResults());
+        self::assertSame(1, $this->db->table('imports')->where('id', $otherId)->countAllResults());
+        $this->expectException(\CodeIgniter\Exceptions\PageNotFoundException::class);
+        $this->postAsAdmin('/admin/uploads/' . $this->importId . '/delete', []);
+    }
+
+    public function testViewerCannotManageImports(): void
+    {
+        foreach (['archive', 'restore', 'delete'] as $action) {
+            $security = service('security');
+            $name = $security->getTokenName();
+            $hash = $security->getHash();
+            $this->withSession(['user_id' => $this->viewerId, $name => $hash])->post('/admin/uploads/' . $this->importId . '/' . $action, [$name => $hash])->assertStatus(403);
+        }
+        self::assertSame(0, (int) $this->db->table('imports')->where('id', $this->importId)->get()->getRowArray()['archived']);
+        self::assertSame(3, $this->db->table('responses')->where('import_id', $this->importId)->countAllResults());
+    }
+
     public function testGuestCannotAccessDashboard(): void
     {
         $this->get('/dashboard')->assertRedirectTo('/login');

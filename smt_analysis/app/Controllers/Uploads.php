@@ -19,6 +19,50 @@ class Uploads extends BaseController
         ]);
     }
 
+    public function archive(int $id)
+    {
+        return $this->setArchived($id, 1);
+    }
+
+    public function restore(int $id)
+    {
+        return $this->setArchived($id, 0);
+    }
+
+    private function setArchived(int $id, int $archived)
+    {
+        $db = db_connect();
+        if (!$db->table('imports')->where('id', $id)->get()->getRowArray()) {
+            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound('Report not found.');
+        }
+        if (!$db->table('imports')->where('id', $id)->update(['archived' => $archived])) {
+            return redirect()->to(site_url('admin/uploads'))->with('error', 'The report could not be updated. Please try again.');
+        }
+        return redirect()->to(site_url('admin/uploads'))->with('success', $archived ? 'Report archived. You can restore it from import history.' : 'Report restored to the dashboard.');
+    }
+
+    public function delete(int $id)
+    {
+        $db = db_connect();
+        if (!$db->table('imports')->where('id', $id)->get()->getRowArray()) {
+            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound('Report not found.');
+        }
+        try {
+            $db->transException(true)->transStart();
+            $db->table('responses')->where('import_id', $id)->delete();
+            $db->table('imports')->where('id', $id)->delete();
+            $db->transComplete();
+            if (!$db->transStatus()) {
+                throw new \RuntimeException('Report deletion transaction failed.');
+            }
+        } catch (Throwable $e) {
+            $db->transRollback();
+            log_message('error', 'Report deletion failed: {error}', ['error' => $e->getMessage()]);
+            return redirect()->to(site_url('admin/uploads'))->with('error', 'The report could not be deleted. Please try again.');
+        }
+        return redirect()->to(site_url('admin/uploads'))->with('success', 'Report and its imported responses permanently deleted.');
+    }
+
     public function store()
     {
         if (!$this->validateData([], ['workbook' => 'uploaded[workbook]|max_size[workbook,20480]|ext_in[workbook,xlsx]'])) {

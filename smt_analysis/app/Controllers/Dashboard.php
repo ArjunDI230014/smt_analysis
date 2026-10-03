@@ -9,7 +9,7 @@ class Dashboard extends BaseController
 {
     public function index()
     {
-        $imports = db_connect()->table('imports')->orderBy('id', 'DESC')->get()->getResultArray();
+        $imports = db_connect()->table('imports')->where('archived', 0)->orderBy('id', 'DESC')->get()->getResultArray();
         $input = $this->request->getGet();
         $report = new CsatReport();
         try {

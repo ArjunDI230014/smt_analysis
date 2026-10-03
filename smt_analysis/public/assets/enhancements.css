@@ -28,6 +28,12 @@ html.theme-transition .theme-icon { transition: transform .4s ease; }
 .agent-suggestions li:hover, .agent-suggestions li[aria-selected="true"] { background: var(--canvas); }
 .search-summary { margin: 0 0 16px; font-size: 12px; color: var(--ink); }
 .filters { overflow: visible; }
+.import-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 220px; }
+.import-actions form { margin: 0; }
+.danger-button { color: #a5442b; border-color: #e6b8a7; }
+.danger-button:hover { background: #fff0ea; border-color: #c67b61; }
+html[data-theme="dark"] .danger-button { color: #ffc4ac; border-color: #825447; }
+html[data-theme="dark"] .danger-button:hover { background: #4b3029; }
 html[data-theme="dark"] { color-scheme: dark; --ink: #e2eee8; --muted: #a6b9af; --green: #7acbb2; --line: #344b40; --canvas: #14251e; --surface: #1d3027; --chart-text: #b3c7bb; --chart-grid: #354b40; --chart-green: #74cbb1; }
 html[data-theme="dark"] :is(.sidebar,.panel,.kpi,.login-layout,input,select,.secondary,.access-badge) { background: var(--surface); color: var(--ink); }
 html[data-theme="dark"] .topbar { background: #192b22; color: var(--muted); }

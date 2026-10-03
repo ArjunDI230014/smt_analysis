@@ -7,6 +7,25 @@ use DomainException;
 
 class Dashboard extends BaseController
 {
+    public function agent(int $id)
+    {
+        $db = db_connect();
+        $identity = $db->table('responses')->select('responses.*')->join('imports', 'imports.id = responses.import_id')->where('responses.id', $id)->where('imports.archived', 0)->get()->getRowArray();
+        if (!$identity) {
+            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound('Agent not found.');
+        }
+        $report = new CsatReport($db, $identity['agent_email'] ?: null, $identity['agent_name']);
+        try {
+            $filters = $report->filters($this->request->getGet());
+        } catch (DomainException $e) {
+            return redirect()->to(site_url('admin/agents/' . $id))->with('error', $e->getMessage());
+        }
+        $filters['agent'] = '';
+        $data = $report->build((int) $identity['import_id'], $filters);
+        $account = $identity['agent_email'] ? $db->table('users')->select('name, email, role, active, archived')->where('email', $identity['agent_email'])->get()->getRowArray() : null;
+        return view('dashboard/agent', array_merge($data, compact('identity', 'account', 'filters'), ['title' => 'Agent details']));
+    }
+
     public function index()
     {
         $imports = db_connect()->table('imports')->where('archived', 0)->orderBy('id', 'DESC')->get()->getResultArray();

@@ -9,7 +9,7 @@ use DomainException;
 class CsatReport
 {
     private array $matchedNames = [];
-    public function __construct(private ?BaseConnection $db = null, private ?string $ownerEmail = null)
+    public function __construct(private ?BaseConnection $db = null, private ?string $ownerEmail = null, private ?string $exactName = null)
     {
         $this->db ??= db_connect();
     }
@@ -47,6 +47,9 @@ class CsatReport
     private function query(int $importId, array $filters): BaseBuilder
     {
         $query = $this->db->table('responses')->where('import_id', $importId);
+        if ($this->exactName !== null) {
+            $query->where('agent_name', $this->exactName);
+        }
         if ($this->ownerEmail !== null) {
             $query->where('agent_email', strtolower(trim($this->ownerEmail)));
         }
@@ -97,7 +100,7 @@ class CsatReport
         $agentCount = $this->query($importId, $filters)->select('agent_name, team')->groupBy(['agent_name', 'team'])->countAllResults();
         $pages = max(1, (int) ceil($agentCount / 25));
         $page = max(1, min($pages, $page));
-        $agents = $this->query($importId, $filters)->select('agent_name, team, COUNT(*) AS total, SUM(good) AS good, SUM(bad) AS bad', false)
+        $agents = $this->query($importId, $filters)->select('MIN(id) AS response_id, agent_name, team, COUNT(*) AS total, SUM(good) AS good, SUM(bad) AS bad', false)
             ->groupBy(['agent_name', 'team'])->orderBy('total', 'DESC')->orderBy('agent_name', 'ASC')->orderBy('team', 'ASC')
             ->limit(25, ($page - 1) * 25)->get()->getResultArray();
         foreach ($agents as &$agent) {

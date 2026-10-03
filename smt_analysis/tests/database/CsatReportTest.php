@@ -113,6 +113,23 @@ final class CsatReportTest extends CIUnitTestCase
         $this->get('/dashboard')->assertRedirectTo('/login');
     }
 
+    public function testAdminAgentDetailsUseExactIdentityAndAreAdminOnly(): void
+    {
+        $this->db->table('responses')->where('csat_id', '1')->update(['agent_email' => 'viewer@example.test']);
+        $this->db->table('responses')->where('csat_id', '3')->update(['agent_name' => 'Agent 1', 'agent_email' => 'other@example.test']);
+        $id = (int) $this->db->table('responses')->where('csat_id', '1')->get()->getRowArray()['id'];
+        $detail = $this->withSession(['user_id' => $this->adminId])->get('/admin/agents/' . $id);
+        $detail->assertOK();
+        $detail->assertSee('viewer@example.test');
+        $detail->assertSee('100.00');
+        $detail->assertDontSee('other@example.test');
+        $detail->assertSee('Manage account');
+        $this->withSession(['user_id' => $this->viewerId])->get('/admin/agents/' . $id)->assertStatus(403);
+        $this->db->table('imports')->where('id', $this->importId)->update(['archived' => 1]);
+        $this->expectException(\CodeIgniter\Exceptions\PageNotFoundException::class);
+        $this->withSession(['user_id' => $this->adminId])->get('/admin/agents/' . $id);
+    }
+
     public function testViewerCannotAccessAdmin(): void
     {
         $this->withSession(['user_id' => $this->viewerId])->get('/admin/uploads')->assertStatus(403);

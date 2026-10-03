@@ -14,6 +14,7 @@ $routes->group('', ['filter' => 'auth'], static function ($routes) {
     $routes->get('dashboard', 'Dashboard::index');
 });
 $routes->group('admin', ['filter' => 'auth:admin'], static function ($routes) {
+    $routes->get('agents/(:num)', 'Dashboard::agent/$1');
     $routes->get('uploads', 'Uploads::index');
     $routes->post('uploads', 'Uploads::store');
     $routes->post('uploads/(:num)/archive', 'Uploads::archive/$1');

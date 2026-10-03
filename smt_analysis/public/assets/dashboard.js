@@ -1,5 +1,7 @@
-(() => {
+window.renderDashboard = () => {
+    if (!document.getElementById('report-data')) return;
     const error = document.getElementById('chart-error');
+    if (!error) return;
     if (!window.Chart) { error.hidden = false; return; }
     try {
         const { summary, groups } = JSON.parse(document.getElementById('report-data').textContent);
@@ -49,6 +51,8 @@
             });
         };
         applyTheme();
-        document.addEventListener('themechange', applyTheme);
+        window.applyDashboardTheme = applyTheme;
     } catch (exception) { error.hidden = false; }
-})();
+};
+document.addEventListener('themechange', () => window.applyDashboardTheme?.());
+window.renderDashboard();

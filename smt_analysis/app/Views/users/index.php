@@ -2,5 +2,27 @@
 <?= $this->section('content') ?>
 <div class="page-heading"><div><p class="eyebrow">WORKSPACE ACCESS</p><h1>The right view for your team.</h1><p class="muted">Administrators manage reports and accounts. Users can explore dashboards.</p></div></div>
 <section class="panel"><div class="panel-heading"><div><h2>Create an account</h2><p>Use a unique password of at least 12 characters.</p></div></div><form class="user-form" method="post" action="<?= site_url('admin/users') ?>"><?= csrf_field() ?><label>Full name<input name="name" required maxlength="120" autocomplete="name"></label><label>Email address<input name="email" type="email" required maxlength="190" autocomplete="email"></label><label>Password<input name="password" type="password" required minlength="12" maxlength="72" autocomplete="new-password"></label><label>Access level<select name="role"><option value="user">User · view dashboards</option><option value="admin">Admin · full access</option></select></label><button class="button" type="submit">Create account</button></form></section>
-<section class="panel users-table"><div class="panel-heading"><div><h2>Team members</h2><p>Deactivating an account blocks access, including existing sessions.</p></div></div><div class="table-scroll"><table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th></th></tr></thead><tbody><?php foreach ($users as $user): ?><tr><td class="agent-name"><?= esc($user['name']) ?></td><td><?= esc($user['email']) ?></td><td><span class="tag"><?= esc(ucfirst($user['role'])) ?></span></td><td><?= $user['active'] ? 'Active' : 'Inactive' ?></td><td><?php if ((int) $user['id'] !== (int) session('user_id')): ?><form method="post" action="<?= site_url('admin/users/' . $user['id'] . '/toggle') ?>"><?= csrf_field() ?><button class="button secondary small-button" type="submit"><?= $user['active'] ? 'Deactivate' : 'Activate' ?></button></form><?php else: ?><span class="small muted">Your account</span><?php endif ?></td></tr><?php endforeach ?></tbody></table></div></section>
+<section class="panel users-table">
+<div class="panel-heading"><div><h2>Team members</h2><p>Archive accounts to block access and keep them for later. Deleting an account is permanent; imported reports are preserved.</p></div></div>
+<div class="table-scroll"><table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+<?php foreach ($users as $user): ?>
+<tr><td class="agent-name"><?= esc($user['name']) ?></td><td><?= esc($user['email']) ?></td><td><span class="tag"><?= esc(ucfirst($user['role'])) ?></span></td><td><?= $user['archived'] ? 'Archived' : ($user['active'] ? 'Active' : 'Inactive') ?></td><td>
+<details><summary>Change password</summary>
+<form method="post" action="<?= site_url('admin/users/' . $user['id'] . '/password') ?>">
+<?= csrf_field() ?>
+<label>New password<input aria-label="New password for <?= esc($user['name']) ?>" name="password" type="password" required minlength="12" maxlength="72" autocomplete="new-password"></label>
+<label>Confirm password<input aria-label="Confirm password for <?= esc($user['name']) ?>" name="password_confirmation" type="password" required minlength="12" maxlength="72" autocomplete="new-password"></label>
+<button class="button secondary small-button" type="submit">Save password</button>
+</form></details>
+<?php if ((int) $user['id'] !== (int) session('user_id')): ?>
+<?php if (!$user['archived']): ?>
+<form method="post" action="<?= site_url('admin/users/' . $user['id'] . '/toggle') ?>"><?= csrf_field() ?><button class="button secondary small-button" type="submit"><?= $user['active'] ? 'Deactivate' : 'Activate' ?></button></form>
+<?php endif ?>
+<form method="post" action="<?= site_url('admin/users/' . $user['id'] . ($user['archived'] ? '/restore' : '/archive')) ?>"><?= csrf_field() ?><button class="button secondary small-button" type="submit"><?= $user['archived'] ? 'Restore' : 'Archive' ?></button></form>
+<details><summary>Delete account</summary><p class="small">Permanently delete <?= esc($user['email']) ?>? This cannot be undone.</p>
+<form method="post" action="<?= site_url('admin/users/' . $user['id'] . '/delete') ?>"><?= csrf_field() ?><button class="button secondary small-button" type="submit">Confirm permanent deletion</button></form></details>
+<?php else: ?><span class="small muted">Your account</span><?php endif ?>
+</td></tr>
+<?php endforeach ?>
+</tbody></table></div></section>
 <?= $this->endSection() ?>

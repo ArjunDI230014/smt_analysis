@@ -28,7 +28,7 @@ class Auth extends BaseController
         // Use a valid dummy hash to avoid skipping password verification for unknown accounts.
         $hash = $user['password_hash'] ?? '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.';
         $valid = password_verify($password, $hash);
-        if (!$user || !$valid || !(int) $user['active']) {
+        if (!$user || !$valid || !(int) $user['active'] || (int) $user['archived']) {
             return redirect()->back()->with('error', 'The email or password is incorrect.');
         }
         session()->regenerate(true);

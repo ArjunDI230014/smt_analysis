@@ -22,4 +22,8 @@ $routes->group('admin', ['filter' => 'auth:admin'], static function ($routes) {
     $routes->get('users', 'Users::index');
     $routes->post('users', 'Users::store');
     $routes->post('users/(:num)/toggle', 'Users::toggle/$1');
+    $routes->post('users/(:num)/password', 'Users::password/$1');
+    $routes->post('users/(:num)/archive', 'Users::archive/$1');
+    $routes->post('users/(:num)/restore', 'Users::restore/$1');
+    $routes->post('users/(:num)/delete', 'Users::delete/$1');
 });

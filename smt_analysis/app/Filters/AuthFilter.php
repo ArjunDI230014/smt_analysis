@@ -13,7 +13,7 @@ class AuthFilter implements FilterInterface
     {
         $id = session()->get('user_id');
         $user = $id ? (new UserModel())->find($id) : null;
-        if (!$user || !(int) $user['active']) {
+        if (!$user || !(int) $user['active'] || (int) $user['archived']) {
             session()->remove(['user_id', 'user']);
             return redirect()->to(site_url('login'));
         }

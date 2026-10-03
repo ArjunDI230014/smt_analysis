@@ -185,6 +185,52 @@ final class CsatReportTest extends CIUnitTestCase
         self::assertSame(1, (int) (new UserModel())->find($this->adminId)['active']);
     }
 
+    public function testAdminCanChangePasswordAndInvalidPasswordsAreRejected(): void
+    {
+        $oldHash = (new UserModel())->find($this->viewerId)['password_hash'];
+        $this->postAsAdmin('/admin/users/' . $this->viewerId . '/password', ['password' => 'short', 'password_confirmation' => 'short'])->assertRedirect();
+        self::assertSame($oldHash, (new UserModel())->find($this->viewerId)['password_hash']);
+        $this->postAsAdmin('/admin/users/' . $this->viewerId . '/password', ['password' => 'replacement-password', 'password_confirmation' => 'mismatch'])->assertRedirect();
+        self::assertSame($oldHash, (new UserModel())->find($this->viewerId)['password_hash']);
+        $this->postAsAdmin('/admin/users/' . $this->viewerId . '/password', ['password' => 'replacement-password', 'password_confirmation' => 'replacement-password'])->assertRedirectTo('/admin/users');
+        $hash = (new UserModel())->find($this->viewerId)['password_hash'];
+        self::assertTrue(password_verify('replacement-password', $hash));
+        self::assertFalse(password_verify('test-password-123', $hash));
+    }
+
+    public function testArchiveBlocksExistingSessionsAndRestoreRetainsAccount(): void
+    {
+        $this->postAsAdmin('/admin/users/' . $this->viewerId . '/archive')->assertRedirectTo('/admin/users');
+        self::assertSame(1, (int) (new UserModel())->find($this->viewerId)['archived']);
+        $this->withSession(['user_id' => $this->viewerId])->get('/dashboard')->assertRedirectTo('/login');
+        $this->postAsAdmin('/admin/users/' . $this->viewerId . '/restore')->assertRedirectTo('/admin/users');
+        $this->withSession(['user_id' => $this->viewerId])->get('/dashboard')->assertOK();
+    }
+
+    public function testDeletePreservesReportsAndBlocksDeletedAccount(): void
+    {
+        $this->db->table('imports')->where('id', $this->importId)->update(['uploaded_by' => $this->viewerId]);
+        $this->postAsAdmin('/admin/users/' . $this->viewerId . '/delete')->assertRedirectTo('/admin/users');
+        self::assertNull((new UserModel())->find($this->viewerId));
+        self::assertSame($this->adminId, (int) $this->db->table('imports')->where('id', $this->importId)->get()->getRowArray()['uploaded_by']);
+        self::assertSame(3, $this->db->table('responses')->countAllResults());
+        $this->withSession(['user_id' => $this->viewerId])->get('/dashboard')->assertRedirectTo('/login');
+    }
+
+    public function testSelfRemovalAndNonAdminUserManagementAreBlocked(): void
+    {
+        foreach (['archive', 'delete'] as $action) {
+            $this->postAsAdmin('/admin/users/' . $this->adminId . '/' . $action)->assertRedirect();
+            self::assertSame(0, (int) (new UserModel())->find($this->adminId)['archived']);
+        }
+        foreach (['password', 'archive', 'restore', 'delete'] as $action) {
+            $security = service('security');
+            $name = $security->getTokenName();
+            $hash = $security->getHash();
+            $this->withSession(['user_id' => $this->viewerId, $name => $hash])->post('/admin/users/' . $this->adminId . '/' . $action, [$name => $hash])->assertStatus(403);
+        }
+    }
+
     private function postAsAdmin(string $path, array $data = [])
     {
         $security = service('security');

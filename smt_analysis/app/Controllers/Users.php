@@ -8,7 +8,7 @@ class Users extends BaseController
 {
     public function index()
     {
-        return view('users/index', ['title' => 'Manage users', 'users' => (new UserModel())->select('id, name, email, role, active, created_at')->orderBy('id', 'DESC')->findAll()]);
+        return view('users/index', ['title' => 'Manage users', 'users' => (new UserModel())->select('id, name, email, role, active, archived, created_at')->orderBy('id', 'DESC')->findAll()]);
     }
 
     public function store()
@@ -45,7 +45,74 @@ class Users extends BaseController
         if (!$user) {
             throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
         }
+        if ($user['archived']) {
+            return redirect()->to(site_url('admin/users'))->with('error', 'Restore this account before changing its access.');
+        }
         $model->update($id, ['active' => (int) !$user['active']]);
         return redirect()->back()->with('success', 'Account access updated.');
+    }
+
+    public function password(int $id)
+    {
+        $this->findUser($id);
+        $password = (string) $this->request->getPost('password');
+        if (strlen($password) < 12 || strlen($password) > 72
+            || $password !== (string) $this->request->getPost('password_confirmation')) {
+            return redirect()->to(site_url('admin/users'))->with('error', 'Passwords must match and contain 12–72 bytes.');
+        }
+        (new UserModel())->update($id, ['password_hash' => password_hash($password, PASSWORD_DEFAULT)]);
+        return redirect()->to(site_url('admin/users'))->with('success', 'Password updated. Share the new password privately with the user.');
+    }
+
+    public function archive(int $id)
+    {
+        return $this->setArchived($id, 1);
+    }
+
+    public function restore(int $id)
+    {
+        return $this->setArchived($id, 0);
+    }
+
+    private function setArchived(int $id, int $archived)
+    {
+        $this->findUser($id);
+        if ($id === (int) session('user_id')) {
+            return redirect()->to(site_url('admin/users'))->with('error', 'You cannot archive your own account.');
+        }
+        (new UserModel())->update($id, ['archived' => $archived]);
+        return redirect()->to(site_url('admin/users'))->with('success', $archived ? 'Account archived. Access is blocked until restored.' : 'Account restored.');
+    }
+
+    public function delete(int $id)
+    {
+        $this->findUser($id);
+        if ($id === (int) session('user_id')) {
+            return redirect()->to(site_url('admin/users'))->with('error', 'You cannot delete your own account.');
+        }
+        $db = db_connect();
+        try {
+            $db->transException(true)->transStart();
+            // Preserve reports when their uploader's account is removed.
+            $db->table('imports')->where('uploaded_by', $id)->update(['uploaded_by' => (int) session('user_id')]);
+            $db->table('users')->where('id', $id)->delete();
+            $db->transComplete();
+            if (!$db->transStatus()) {
+                throw new \RuntimeException('Account deletion failed.');
+            }
+        } catch (\Throwable $e) {
+            $db->transRollback();
+            return redirect()->to(site_url('admin/users'))->with('error', 'Account could not be deleted. Please try again.');
+        }
+        return redirect()->to(site_url('admin/users'))->with('success', 'Account permanently deleted. Imported reports were preserved.');
+    }
+
+    private function findUser(int $id): array
+    {
+        $user = (new UserModel())->find($id);
+        if (!$user) {
+            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound('User not found.');
+        }
+        return $user;
     }
 }

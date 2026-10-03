@@ -2,7 +2,7 @@
 
 The application includes administrator/user access, imports only the **Daily CSAT** Excel worksheet, and presents interactive Chart.js dashboards. Flagged rows are excluded by default.
 
-See **[SETUP.md](SETUP.md)** for startup, account creation, upload requirements, and tests. On Windows, run `start.ps1` from this folder.
+See **[SETUP.md](SETUP.md)** for startup, account creation, upload requirements, and tests. Use XAMPP Apache at **http://localhost/smt_analysis/**, or **http://192.168.1.5/smt_analysis/** from another device on your network. See SETUP.md for firewall and startup details.
 
 ---
 
@@ -75,3 +75,4 @@ Additionally, make sure that the following extensions are enabled in your PHP:
 - json (enabled by default - don't turn it off)
 - [mysqlnd](http://php.net/manual/en/mysqlnd.install.php) if you plan to use MySQL
 - [libcurl](http://php.net/manual/en/curl.requirements.php) if you plan to use the HTTP\CURLRequest library
+

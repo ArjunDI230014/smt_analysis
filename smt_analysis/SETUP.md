@@ -2,7 +2,22 @@
 
 A CodeIgniter 4 application for importing **only the worksheet named `Daily CSAT`** and exploring customer satisfaction with locally bundled Chart.js charts.
 
-## Start on this Windows computer
+## Apache access on this computer and the local network
+
+XAMPP Apache is configured to serve this workspace's `public` folder at:
+
+- This computer: **http://localhost/smt_analysis/**
+- Other devices on the same network: **http://192.168.1.5/smt_analysis/**
+
+Keep Apache running in XAMPP Control Panel. No `php spark serve` or terminal server is needed. Start Apache again after a reboot, or install its Windows service using XAMPP Control Panel as administrator for automatic startup.
+
+The installed Apache include is `C:/xampp/apache/conf/extra/httpd-smt.conf`; its reference copy is `deploy/apache-smt.conf`. This app uses the existing PHP 8.4 CGI executable because XAMPP's PHP 8.2 is too old for the installed dependencies. `deploy/php.ini` supplies the required PHP settings. Other XAMPP apps continue using their current handler.
+
+For LAN access, use a trusted Windows **Private** network. Run `deploy/allow-lan.ps1` as administrator to allow Apache on TCP port 80 from the local subnet. Devices must be on the same Wi-Fi/LAN without client isolation. No router port forwarding is needed. If your PC's IP changes, update `app/Config/App.php`'s `allowedHostnames` with the new IP and share the new URL; a DHCP reservation keeps the address stable. All users access the same database and sign in with their own accounts.
+
+The configurations contain absolute paths for this computer. Update them and Apache's Include path if moving the project. Only the public folder is exposed.
+
+## Optional development server
 
 From the outer project folder, run:
 
@@ -111,3 +126,4 @@ The optional `tests/smoke_http.py` checks the real HTTP upload/login flow agains
 The provided workbook was verified through the HTTP uploader in the isolated test database: **4,786 responses, 3,605 Good, 1,181 Bad, 75.32% CSAT** with all rows included. It was not modified or bundled into the repository.
 
 Implementation references: [PhpSpreadsheet worksheet selection](https://phpspreadsheet.readthedocs.io/en/latest/topics/reading-files/#reading-only-named-worksheets-from-a-file) and [Chart.js integration](https://www.chartjs.org/docs/latest/getting-started/integration).
+

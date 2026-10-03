@@ -6,6 +6,8 @@ use CodeIgniter\Router\RouteCollection;
 $routes->setAutoRoute(false);
 $routes->get('login', 'Auth::index');
 $routes->post('login', 'Auth::login');
+$routes->get('register', 'Registration::index');
+$routes->post('register', 'Registration::complete');
 $routes->post('logout', 'Auth::logout', ['filter' => 'auth']);
 $routes->group('', ['filter' => 'auth'], static function ($routes) {
     $routes->get('/', 'Dashboard::index');

@@ -90,6 +90,7 @@ class DailyCsatImporter
                 }
                 $ids[$id] = true;
                 $rawJson = json_encode($raw, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE);
+                AgentRoster::identity($raw);
                 if (strlen($rawJson) > 60000) {
                     throw new DomainException("Row {$r}: the row contains too much text to import.");
                 }
@@ -142,6 +143,19 @@ class DailyCsatImporter
                 'created_at' => date('Y-m-d H:i:s'),
             ]);
             $importId = (int) $db->insertID();
+            $identities = [];
+            foreach ($rows as $row) {
+                $identity = AgentRoster::identity(json_decode($row['raw_json'], true));
+                if ($identity) {
+                    if (isset($identities[$identity['email']]) && $identities[$identity['email']]['name'] !== $identity['name']) {
+                        throw new DomainException('The same agent email has conflicting names in this workbook. Correct it before importing.');
+                    }
+                    $identities[$identity['email']] = $identity;
+                }
+            }
+            foreach ($identities as $identity) {
+                AgentRoster::remember($db, $identity);
+            }
             foreach (array_chunk($rows, 200) as $chunk) {
                 foreach ($chunk as &$row) {
                     $row['import_id'] = $importId;

@@ -26,7 +26,13 @@ The script enables the existing SQLite PHP extension for this process only and c
 
 Passwords are hashed. Login attempts are throttled. All form submissions have CSRF protection; access restrictions are enforced on the server. Inactive accounts lose access on their next request. Report pages are not cached.
 
-There is no public registration and no default application password. Add additional accounts through **Manage users**, or run `php -d extension=sqlite3 spark csat:user` from this inner application folder. Password reset and email delivery are not included in this initial version.
+Users can choose **Create your account** on the sign-in page. Eligibility comes from the agent email in imported Daily CSAT rows (`agent_email`, or `email` when `agent_email` is absent). Emails are trimmed and lowercased; the account name comes from `agent_name`. Repeated report rows create only one roster identity. Blank email values do not grant eligibility. Reports without these optional email columns still import for analytics.
+
+Registration creates an account directly using the sheet email and a confirmed password of 12–72 bytes. Email verification and SMTP configuration are not required. Self-created accounts always have the **user** role. Existing accounts, including inactive ones, cannot register again. Emails are normalized before insertion, and the database unique email constraint prevents duplicate accounts from simultaneous requests. Registration requests are rate limited and protected by CSRF.
+
+The roster is independent of reports, so archiving or deleting a report does not erase eligibility. Administrators should deactivate accounts to revoke access. Without email verification, knowing an eligible email is enough to register it; email ownership is not checked.
+
+Run `php spark migrate` when updating an existing installation. The registration migration builds the roster from valid agent names/emails in previously imported raw rows. New imports keep it updated and reject conflicting names for the same email within a workbook. Administrators can still create accounts through **Manage users**, or `php spark csat:user`. Password reset is not included; users needing recovery should contact their administrator.
 
 ## MySQL / phpMyAdmin setup
 

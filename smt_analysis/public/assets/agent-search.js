@@ -2,8 +2,11 @@
     const input = document.getElementById('agent-search');
     const list = document.getElementById('agent-suggestions');
     const hint = document.getElementById('agent-search-hint');
+    const source = document.getElementById('agent-names');
+    if (!input || !list || !hint || !source) return;
     const normalize = value => value.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
-    const names = JSON.parse(document.getElementById('agent-names').textContent).map(name => ({name, normalized: normalize(name)}));
+    const prepareNames = values => values.map(name => ({name, normalized: normalize(name)}));
+    let names = prepareNames(JSON.parse(source.textContent));
     let active = -1;
     const distance = (a, b) => {
         let previous = Array.from({length: b.length + 1}, (_, i) => i);
@@ -30,7 +33,7 @@
         active = -1;
         input.removeAttribute('aria-activedescendant');
         const query = normalize(input.value);
-        if (!query) { close(); hint.textContent = 'Partial names, any word order, or small typos.'; return; }
+        if (!query) { close(); hint.textContent = 'Partial names, any word order, or small typos. Press / to focus search.'; return; }
         const terms = query.split(' ');
         const matches = names.filter(({normalized}) => terms.every(term => {
             if (normalized.includes(term)) return true;
@@ -48,12 +51,19 @@
             item.addEventListener('click', () => choose(item));
             list.append(item);
         });
-        list.hidden = matches.length === 0;
-        input.setAttribute('aria-expanded', String(matches.length > 0));
+        list.hidden = matches.length === 0 || document.activeElement !== input;
+        input.setAttribute('aria-expanded', String(!list.hidden));
     };
     input.addEventListener('input', refresh);
     input.addEventListener('focus', refresh);
     input.addEventListener('blur', close);
+    document.addEventListener('dashboard:updated', event => {
+        const wasOpen = !list.hidden;
+        names = prepareNames(event.detail.agentNames);
+        source.textContent = JSON.stringify(event.detail.agentNames);
+        refresh();
+        if (!wasOpen) close();
+    });
     input.addEventListener('keydown', event => {
         const items = [...list.children];
         if (event.key === 'Escape') { event.preventDefault(); close(); return; }

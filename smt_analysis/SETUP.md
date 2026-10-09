@@ -85,7 +85,11 @@ Relationships: one user uploads many imports; one import owns many responses. CS
 
 ## Score and charts
 
-Use the bottom-right Dark mode / Light mode toggle to change appearance. The browser remembers your choice, and charts follow the selected theme.
+Use the light/dark toggle in the workspace header (top-right on sign-in pages) to switch appearance. The initial theme follows your device's appearance; manual choices are remembered and synchronized across browser tabs. Dark mode uses charcoal surfaces and the orange accent `#EE4D2D`. Charts follow the theme while Good and Bad ratings keep distinct green and coral colors.
+
+Quick date ranges show the entire report, its last 7 days, or its last 30 days, ending on the report's latest date. Applied filter chips show what contributes to the current results and can be removed individually. Agent search updates scores, charts, and the table as you type; press `/` to focus search or use the clear button to show all agents. Date ranges are checked before applying. On smaller screens, use Menu to open workspace navigation.
+
+The report uploader accepts a single workbook through the file picker or drag and drop. It previews the filename and size, supports clearing the selection, and reports format or file-size problems before submission. Server-side workbook validation still runs on every import.
 
 Agent search accepts case-insensitive partial names, accents, words in any order, and small spelling mistakes (one edit for words of 4–6 characters, two for longer words). All entered words must match. Suggestions appear as you type; press Enter to search all similar names, or select a suggestion with the mouse or arrow keys and Enter. Suggestions reflect the last applied report/date/team/channel/inclusion filters. Apply filters after changing those settings to refresh available agents. The results show the number of matching names, and all scores and charts use the same matches.
 
@@ -117,6 +121,7 @@ Run from the inner application folder:
 
 ```powershell
 php -d extension=sqlite3 -d memory_limit=512M vendor/phpunit/phpunit/phpunit --no-coverage
+node --test tests/theme.test.cjs tests/dashboard.test.cjs
 ```
 
 The tests cover exact sheet selection, long identifiers, missing columns, invalid ratings/dates, duplicate IDs, row limits, weighted CSAT, filters, and authorization.

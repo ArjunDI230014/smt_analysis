@@ -8,6 +8,8 @@
     <script src="<?= base_url('assets/theme.js') ?>?v=<?= filemtime(FCPATH . 'assets/theme.js') ?>"></script>
     <link rel="stylesheet" href="<?= base_url('assets/app.css') ?>">
     <link rel="stylesheet" href="<?= base_url('assets/enhancements.css') ?>?v=<?= filemtime(FCPATH . 'assets/enhancements.css') ?>">
+    <link rel="stylesheet" href="<?= base_url('assets/dsat.css') ?>?v=<?= filemtime(FCPATH . 'assets/dsat.css') ?>">
+    <link rel="stylesheet" href="<?= base_url('assets/sheets.css') ?>?v=<?= filemtime(FCPATH . 'assets/sheets.css') ?>">
     <script src="<?= base_url('assets/workspace.js') ?>?v=<?= filemtime(FCPATH . 'assets/workspace.js') ?>" defer></script>
 </head>
 <body>
@@ -28,11 +30,12 @@
         <?php $overviewActive = in_array($path, ['', 'dashboard'], true) || str_starts_with($path, 'admin/agents/'); ?>
         <a class="<?= $overviewActive ? 'active' : '' ?>" <?= $overviewActive ? 'aria-current="page"' : '' ?> href="<?= site_url('dashboard') ?>"><svg aria-hidden="true" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg> Overview</a>
         <?php if ($currentUser['role'] === 'admin'): ?>
+        <a class="<?= $path === 'admin/sheets' ? 'active' : '' ?>" <?= $path === 'admin/sheets' ? 'aria-current="page"' : '' ?> href="<?= site_url('admin/sheets') ?>"><svg aria-hidden="true" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M4 9h16M4 15h16M10 9v12"/></svg> Google Sheets</a>
         <a class="<?= $path === 'admin/uploads' ? 'active' : '' ?>" <?= $path === 'admin/uploads' ? 'aria-current="page"' : '' ?> href="<?= site_url('admin/uploads') ?>"><svg aria-hidden="true" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V3m-5 5 5-5 5 5M4 15v5a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-5"/></svg> Upload reports</a>
         <a class="<?= $path === 'admin/users' ? 'active' : '' ?>" <?= $path === 'admin/users' ? 'aria-current="page"' : '' ?> href="<?= site_url('admin/users') ?>"><svg aria-hidden="true" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3M16 5a3 3 0 0 1 0 6m2 4a5 5 0 0 1 3 4v2"/></svg> Manage users</a>
         <?php endif ?>
     </nav>
-    <div class="sidebar-note"><span class="status-dot"></span> Daily CSAT workspace<p>One worksheet.<br>A clearer view of your service.</p></div>
+    <div class="sidebar-note"><span class="status-dot"></span> CSAT workspace<p>Connected feedback.<br>A clearer view of your service.</p></div>
     <div class="profile"><span class="avatar"><?= esc(mb_strtoupper(mb_substr($currentUser['name'], 0, 1))) ?></span><div><strong><?= esc($currentUser['name']) ?></strong><small><?= $currentUser['role'] === 'admin' ? 'Administrator' : 'Viewer' ?></small></div></div>
     <form class="signout-form" action="<?= site_url('logout') ?>" method="post"><?= csrf_field() ?><button class="signout" type="submit" aria-label="Sign out" title="Sign out"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H5v14h4M9 12h12m-4-4 4 4-4 4"/></svg><span>Sign out</span></button></form>
 </aside>

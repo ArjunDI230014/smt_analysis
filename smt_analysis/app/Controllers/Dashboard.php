@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Libraries\CsatReport;
+use App\Libraries\GoogleSheetsSync;
 use DomainException;
 
 class Dashboard extends BaseController
@@ -28,6 +29,7 @@ class Dashboard extends BaseController
 
     public function index()
     {
+        $googleSheets = (new GoogleSheetsSync())->status();
         $imports = db_connect()->table('imports')->where('archived', 0)->orderBy('id', 'DESC')->get()->getResultArray();
         $input = $this->request->getGet();
         $personal = session('user')['role'] !== 'admin';
@@ -40,7 +42,9 @@ class Dashboard extends BaseController
         } catch (DomainException $e) {
             return redirect()->to(site_url('dashboard'))->with('error', $e->getMessage());
         }
-        $selected = $input['import'] ?? ($imports[0]['id'] ?? null);
+        $connectedId = $googleSheets['source']['import_id'] ?? null;
+        $availableIds = array_column($imports, 'id');
+        $selected = $input['import'] ?? ($connectedId && in_array($connectedId, $availableIds) ? $connectedId : ($imports[0]['id'] ?? null));
         $import = null;
         foreach ($imports as $candidate) {
             if (is_scalar($selected) && (string) $candidate['id'] === (string) $selected) {
@@ -58,6 +62,6 @@ class Dashboard extends BaseController
                 ->select('COUNT(*) AS row_count, MIN(response_date) AS date_from, MAX(response_date) AS date_to', false)->get()->getRowArray();
             $import = array_merge($import, $owned);
         }
-        return view('dashboard/index', array_merge($data, compact('imports', 'import', 'filters', 'personal'), ['title' => 'CSAT overview']));
+        return view('dashboard/index', array_merge($data, compact('imports', 'import', 'filters', 'personal', 'googleSheets'), ['title' => 'CSAT overview']));
     }
 }

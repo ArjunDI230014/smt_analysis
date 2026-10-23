@@ -27,12 +27,12 @@ final class DailyCsatImporterTest extends CIUnitTestCase
     private function workbook(?callable $change = null): string
     {
         $book = new Spreadsheet();
-        $sheet = $book->getActiveSheet()->setTitle('Daily CSAT');
+        $sheet = $book->getActiveSheet()->setTitle('Raw Data CSAT');
         $sheet->fromArray([self::HEADERS, [46271, 'Team A', 1, 0, 'Agent One', '2096599610335211576', 'Chat', 1, 120], [46271, 'Team B', 0, 1, 'Agent Two', '2096599610335211577', 'Email', 0, null]], null, 'A1', true);
         $sheet->setCellValueExplicit('F2', '2096599610335211576', DataType::TYPE_STRING);
         $sheet->setCellValueExplicit('F3', '2096599610335211577', DataType::TYPE_STRING);
         // Invalid response rows on an unrelated sheet must never be imported or validated.
-        $book->createSheet()->setTitle('Ignore me')->fromArray([self::HEADERS, ['not a date', 'INVALID', 99, 99, 'Ignored', 'x', 'Other', 4, -99]]);
+        $book->createSheet()->setTitle('Daily CSAT')->fromArray([self::HEADERS, ['not a date', 'INVALID', 99, 99, 'Ignored', 'x', 'Other', 4, -99]]);
         $change && $change($sheet);
         $file = tempnam(sys_get_temp_dir(), 'csat_test_');
         $this->files[] = $file;
@@ -41,7 +41,7 @@ final class DailyCsatImporterTest extends CIUnitTestCase
         return $file;
     }
 
-    public function testOnlyDailyCsatIsReadWithExactIdsAndFlaggedRows(): void
+    public function testOnlyRawDataCsatIsReadWithExactIdsAndFlaggedRows(): void
     {
         $rows = (new DailyCsatImporter())->read($this->workbook());
         self::assertCount(2, $rows);
@@ -54,7 +54,7 @@ final class DailyCsatImporterTest extends CIUnitTestCase
 
     public function testMissingExactSheetFails(): void
     {
-        $file = $this->workbook(static fn ($sheet) => $sheet->setTitle('daily csat'));
+        $file = $this->workbook(static fn ($sheet) => $sheet->setTitle('raw data csat'));
         $this->expectException(DomainException::class);
         $this->expectExceptionMessage('named exactly');
         (new DailyCsatImporter())->read($file);
@@ -64,7 +64,7 @@ final class DailyCsatImporterTest extends CIUnitTestCase
     {
         $file = $this->workbook(static fn ($sheet) => $sheet->setCellValue('A1', 'Wrong date column'));
         $this->expectException(DomainException::class);
-        $this->expectExceptionMessage('Missing columns');
+        $this->expectExceptionMessage('Missing required columns');
         (new DailyCsatImporter())->read($file);
     }
 
@@ -80,7 +80,7 @@ final class DailyCsatImporterTest extends CIUnitTestCase
     {
         $file = $this->workbook(static fn ($sheet) => $sheet->setCellValueExplicit('F3', '2096599610335211576', DataType::TYPE_STRING));
         $this->expectException(DomainException::class);
-        $this->expectExceptionMessage('duplicated');
+        $this->expectExceptionMessage('conflicts');
         (new DailyCsatImporter())->read($file);
     }
 
@@ -94,9 +94,40 @@ final class DailyCsatImporterTest extends CIUnitTestCase
 
     public function testRowPastLimitIsNotSilentlyTruncated(): void
     {
-        $file = $this->workbook(static fn ($sheet) => $sheet->setCellValue('A20000', 46271));
+        $file = $this->workbook(static fn ($sheet) => $sheet->setCellValue('A200001', 46271));
         $this->expectException(DomainException::class);
         $this->expectExceptionMessage('limit');
+        (new DailyCsatImporter())->read($file);
+    }
+
+    public function testExactDuplicateRowsAreRemovedDuringExcelImport(): void
+    {
+        $file = $this->workbook(static function ($sheet): void {
+            $sheet->fromArray([[46271, 'Team A', 1, 0, 'Agent One', '2096599610335211576', 'Chat', 1, 120]], null, 'A4', true);
+            $sheet->setCellValueExplicit('F4', '2096599610335211576', DataType::TYPE_STRING);
+        });
+        $importer = new DailyCsatImporter();
+        self::assertCount(2, $importer->read($file));
+        self::assertSame(1, $importer->duplicatesSkipped());
+    }
+
+    public function testUnnamedHelperCellsOutsideTheRecordAreIgnored(): void
+    {
+        $file = $this->workbook(static fn ($sheet) => $sheet->setCellValue('BN12000', 'Helper value outside the named table'));
+        self::assertCount(2, (new DailyCsatImporter())->read($file));
+    }
+
+    public function testWorkbookDocumentTypesAreRejectedWithoutResolvingEntities(): void
+    {
+        $file = $this->workbook();
+        $zip = new \ZipArchive();
+        $zip->open($file);
+        $xml = $zip->getFromName('xl/workbook.xml');
+        $xml = preg_replace('/(<\?xml[^?]*\?>)/', '$1<!DOCTYPE workbook [<!ENTITY blocked SYSTEM "http://127.0.0.1:1/not-read">]>', $xml, 1);
+        $zip->addFromString('xl/workbook.xml', $xml);
+        $zip->close();
+        $this->expectException(DomainException::class);
+        $this->expectExceptionMessage('document types');
         (new DailyCsatImporter())->read($file);
     }
 }

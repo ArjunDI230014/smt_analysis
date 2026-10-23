@@ -28,7 +28,7 @@
         const url = new URL(form.action);
         url.search = new URLSearchParams(new FormData(form)).toString();
         busy(true);
-        announce('Updating scores, charts, and agent results…');
+        announce('Updating scores, charts, DSAT feedback, and agent results…');
         try {
             const response = await fetch(url, {signal: controller.signal, credentials: 'same-origin'});
             if (current !== generation) return;
@@ -44,6 +44,7 @@
             results.replaceChildren(...content.childNodes);
             results.dataset.responseCount = content.dataset.responseCount;
             results.dataset.agentCount = content.dataset.agentCount;
+            results.dataset.period = content.dataset.period;
             document.getElementById('report-data')?.remove();
             const data = next.getElementById('report-data');
             if (data) document.body.append(data);
@@ -51,9 +52,10 @@
             if (url.href !== location.href) history[push ? 'pushState' : 'replaceState'](null, '', url);
             document.dispatchEvent(new CustomEvent('dashboard:updated', {detail: {agentNames}}));
             const count = Number(content.dataset.responseCount).toLocaleString();
+            const dsatCount = Number(results.querySelector('[data-dsat-total]')?.dataset.dsatTotal || 0).toLocaleString();
             announce(input.value.trim()
-                ? `Updated: ${count} responses across ${Number(content.dataset.agentCount).toLocaleString()} matching agent names.`
-                : `Updated: ${count} responses. All matching agents are shown.`);
+                ? `Updated: ${count} responses, ${dsatCount} DSATs across ${Number(content.dataset.agentCount).toLocaleString()} matching agent names.`
+                : `Updated: ${count} responses, ${dsatCount} DSATs. All matching agents are shown.`);
         } catch (error) {
             if (current === generation && error.name !== 'AbortError') announce('Could not update results. Your previous results are still shown. Use Apply filters to retry.');
         } finally {

@@ -65,13 +65,16 @@ class Uploads extends BaseController
 
     public function store()
     {
-        if (!$this->validateData([], ['workbook' => 'uploaded[workbook]|max_size[workbook,20480]|ext_in[workbook,xlsx]'])) {
-            return redirect()->back()->with('error', 'Choose a valid .xlsx workbook up to 20 MB. Check the server upload limit if your file is rejected.');
+        $maxKilobytes = (int) ceil(DailyCsatImporter::MAX_BYTES / 1024);
+        if (!$this->validateData([], ['workbook' => 'uploaded[workbook]|max_size[workbook,' . $maxKilobytes . ']|ext_in[workbook,xlsx]'])) {
+            return redirect()->back()->with('error', 'Choose a valid .xlsx workbook up to ' . UploadLimits::label(DailyCsatImporter::MAX_BYTES) . '. Check the server upload limit if your file is rejected.');
         }
         $file = $this->request->getFile('workbook');
         try {
-            $id = (new DailyCsatImporter())->import($file->getTempName(), $file->getClientName(), (int) session('user_id'));
-            return redirect()->to(site_url('dashboard') . '?import=' . $id)->with('success', 'Daily CSAT imported successfully. All other worksheets were ignored.');
+            $importer = new DailyCsatImporter();
+            $id = $importer->import($file->getTempName(), $file->getClientName(), (int) session('user_id'));
+            $duplicates = $importer->duplicatesSkipped();
+            return redirect()->to(site_url('dashboard') . '?import=' . $id)->with('success', 'Raw Data CSAT imported successfully. ' . number_format($duplicates) . ' exact duplicate' . ($duplicates === 1 ? '' : 's') . ' skipped. All other worksheets were ignored.');
         } catch (DomainException $e) {
             return redirect()->back()->with('error', $e->getMessage());
         } catch (Throwable $e) {

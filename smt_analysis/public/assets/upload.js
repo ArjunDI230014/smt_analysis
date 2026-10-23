@@ -12,6 +12,7 @@
     const status = document.getElementById('upload-status');
     const buttonLabel = button.textContent;
     const maxBytes = Number(form.dataset.maxBytes);
+    const sheetName = form.dataset.sheetName || 'Raw Data CSAT';
     let importing = false;
     let dragDepth = 0;
 
@@ -48,7 +49,7 @@
         fileName.textContent = file?.name || '';
         fileSize.textContent = file ? formatSize(file.size) : '';
         clearButton.disabled = importing;
-        announce(error || (file ? 'Workbook selected. Ready to import Daily CSAT.' : emptyMessage), error ? 'error' : file ? 'success' : '');
+        announce(error || (file ? `Workbook selected. Ready to import ${sheetName}.` : emptyMessage), error ? 'error' : file ? 'success' : '');
         return error;
     };
 
@@ -125,7 +126,7 @@
         button.textContent = 'Importing…';
         form.classList.add('is-busy');
         button.setAttribute('aria-busy', 'true');
-        announce('Reading and validating Daily CSAT. Please keep this page open.');
+        announce(`Reading and validating ${sheetName}. Large workbooks can take a few minutes. Please keep this page open.`);
     });
 
     window.addEventListener('pageshow', () => {

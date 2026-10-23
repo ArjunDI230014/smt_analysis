@@ -1,6 +1,8 @@
-# SMT Analytics — Daily CSAT
+# SMT Analytics — CSAT and DSAT
 
-The application includes administrator/user access, imports only the **Daily CSAT** Excel worksheet, and presents interactive Chart.js dashboards. Flagged rows are excluded by default.
+The application includes administrator/agent access, a private Google Sheets connection with automatic refresh, Excel imports from **Raw Data CSAT**, and daily, weekly, and monthly CSAT/DSAT dashboards. Both import paths require that exact worksheet name and ignore all other worksheets, even when a Google Sheets URL points to another tab. Agents can see each recorded DSAT reason and customer comment. Connected-sheet refreshes remove exact duplicate entries and preserve the last report on conflicts or failures. Flagged rows are excluded by default.
+
+Master workbooks up to **128 MB** are supported. Identical survey IDs count once; the source’s **Inclulde in CSAT?** flag controls eligibility. Recorded reason codes are decoded to their source labels, including multiple reasons per DSAT. Missing reasons and customer comments remain explicitly unavailable.
 
 See **[SETUP.md](SETUP.md)** for startup, account creation, upload requirements, and tests. Use XAMPP Apache at **http://localhost/smt_analysis/**, or **http://192.168.1.5/smt_analysis/** from another device on your network. See SETUP.md for firewall and startup details.
 

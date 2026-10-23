@@ -12,8 +12,12 @@ $routes->post('logout', 'Auth::logout', ['filter' => 'auth']);
 $routes->group('', ['filter' => 'auth'], static function ($routes) {
     $routes->get('/', 'Dashboard::index');
     $routes->get('dashboard', 'Dashboard::index');
+    $routes->post('sheets/refresh', 'Sheets::due');
 });
 $routes->group('admin', ['filter' => 'auth:admin'], static function ($routes) {
+    $routes->get('sheets', 'Sheets::index');
+    $routes->post('sheets', 'Sheets::save');
+    $routes->post('sheets/refresh', 'Sheets::refresh');
     $routes->get('agents/(:num)', 'Dashboard::agent/$1');
     $routes->get('uploads', 'Uploads::index');
     $routes->post('uploads', 'Uploads::store');

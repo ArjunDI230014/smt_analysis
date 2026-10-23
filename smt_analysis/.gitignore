@@ -125,3 +125,4 @@ _modules/*
 /results/
 /phpunit.xml
 /writable/*.sqlite*
+/writable/private/

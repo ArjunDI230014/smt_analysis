@@ -6,7 +6,7 @@ $phpModules = & $phpCommand -m
 if ($phpModules -notcontains 'sqlite3') {
     $phpOptions += @('-d', 'extension=sqlite3')
 }
-$phpOptions += @('-d', 'memory_limit=512M', '-d', 'upload_max_filesize=20M', '-d', 'post_max_size=22M', '-d', 'max_execution_time=120')
+$phpOptions += @('-d', 'memory_limit=768M', '-d', 'upload_max_filesize=128M', '-d', 'post_max_size=130M', '-d', 'max_execution_time=300')
 & $phpCommand @phpOptions spark migrate
 if ($LASTEXITCODE -ne 0) { throw 'Database migration failed.' }
 & $phpCommand @phpOptions spark csat:user --if-empty

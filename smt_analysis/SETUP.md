@@ -1,6 +1,34 @@
 # SMT Analytics
 
-A CodeIgniter 4 application for importing **only the worksheet named `Daily CSAT`** and exploring customer satisfaction with locally bundled Chart.js charts.
+A CodeIgniter 4 application for connecting a private Google Sheet or importing the Excel worksheet named exactly **Raw Data CSAT**, with CSAT and DSAT reporting. Both paths ignore every other worksheet and stop if Raw Data CSAT is missing.
+
+## Connect Google Sheets once
+
+1. Run `php -d extension=sqlite3 spark migrate` after updating the app.
+2. In Google Cloud Console, create a project, enable **Google Sheets API**, then create a **service account** and its **JSON key**. This is the web app's identity; the spreadsheet may belong to a different email from your GPT or app account.
+3. Sign in to the app as an administrator and open **Google Sheets**. Paste the file URL, choose the refresh interval (15 minutes by default), attach the JSON key, and choose **Save connection**. The supplied source URL is prefilled. Server administrators can instead set `GOOGLE_SHEETS_CREDENTIALS` to an absolute path outside `public`; this disables replacement through the web form.
+4. Open the spreadsheet with its owner account. Share it with the displayed service-account email as **Viewer**. The app uses the read-only Sheets API scope.
+5. Choose **Refresh now**. The app selects the worksheet named exactly **Raw Data CSAT** by its name. The pasted URL may point to any tab; its `gid` does not change this selection. There is no fallback to Daily CSAT or another worksheet. The app does not write to the source spreadsheet.
+
+The service-account key is stored in `writable/private/google-service-account.json`, outside the public directory and ignored by Git. Only administrators can save connection settings, replace the key, or force a refresh. ChatGPT's Google Drive connection is not required for web app syncing.
+
+To switch files later, edit **Google Sheet URL** and save. The replacement file must also contain **Raw Data CSAT**. Share a new private file with the same service-account email. The last successful report stays available until the replacement source passes validation and syncs. The optional exact **Reason column**, **Customer comment column**, and **Case or ticket ID column** mappings select fields within Raw Data CSAT. Recorded DSAT reasons and customer comments stay separate; the app does not invent a cause from a comment or issue category.
+
+Each successful sync updates one managed report to match **Raw Data CSAT**. Keep historical rows in that worksheet for weekly and monthly trends; this connection does not combine other worksheets or previously removed source rows. Exact duplicate CSAT IDs with identical data are skipped and counted; conflicting repeated IDs stop the sync with an actionable error. The source sheet is never deleted or edited. Negative ratings count as DSAT, with each original reason and customer comment shown separately. Daily, Monday–Sunday weekly, and calendar monthly views use the same date/team/channel/agent/inclusion filters. Reason shares use all matching DSATs, including “Reason not provided”. Rates are calculated from counts, not averaged percentages. An enabled connection restores its managed report if that report was archived; pause the connection before archiving it to keep it archived.
+
+The dashboard checks for due updates when opened and every minute while visible. Network reads occur only when the configured interval is due. For unattended syncing while the dashboard is closed, install the included Windows task once:
+
+```powershell
+.\deploy\install-sheet-sync-task.ps1
+```
+
+This runs `deploy/sync-sheets.ps1` once a minute; `php spark csat:sync` decides whether a refresh is due. The task is hidden and runs with the current user's normal privileges while that user is signed in. Keep the computer awake and connected. Run it again to update its registered path after moving the app. To remove it, run `Unregister-ScheduledTask -TaskName 'Summit Analytics Google Sheets Sync' -Confirm:$false`.
+
+On another server, schedule `php -d memory_limit=768M spark csat:sync` every minute with the app directory as working directory. Use `php -d memory_limit=768M spark csat:sync --force` for a manual command-line refresh. Pausing the connection prevents both scheduled and forced syncs. A file lock prevents concurrent refreshes; failed requests retry after at least a minute and preserve the last successful report.
+
+Google references: [service accounts and sharing](https://developers.google.com/workspace/guides/create-credentials), [read-only Sheets scopes](https://developers.google.com/workspace/sheets/api/scopes).
+
+On supported Windows PHP/cURL builds, the Google Sheets client uses the Windows native certificate store while retaining TLS peer and hostname checks. Other servers use their configured system or PHP CA bundle. A certificate, DNS, or network error occurs before Google can check sheet permissions; HTTP 403/404 instead gives the Viewer-sharing guidance. See [curl native CA support](https://curl.se/libcurl/c/CURLOPT_SSL_OPTIONS.html).
 
 ## Apache access on this computer and the local network
 
@@ -27,9 +55,9 @@ From the outer project folder, run:
 
 The script creates the SQLite database, runs migrations, and prompts you to create the first account. Choose **admin**. Use your own email and a password of at least 12 characters. The CLI password prompt is visible, so run it in a private terminal.
 
-Then open **http://localhost:8080**, sign in, and choose **Upload reports**. Select your Excel file. Only `Daily CSAT` is imported. Stop the local server with Ctrl+C.
+Then open **http://localhost:8080**, sign in, and choose **Upload reports**. Select your master Excel workbook. Only `Raw Data CSAT` is imported; every other worksheet is ignored. Stop the local server with Ctrl+C.
 
-The script enables the existing SQLite PHP extension for this process only and configures a 20 MB upload limit, 512 MB memory limit, and 120-second execution limit. It does not edit the system's PHP configuration.
+The script enables the existing SQLite PHP extension for this process only and configures 128 MB uploads, 130 MB requests, 768 MB memory, and a 300-second execution limit. It does not edit the system's PHP configuration. The upload page shows the effective limit of the running server.
 
 ## Features and access
 
@@ -41,13 +69,13 @@ The script enables the existing SQLite PHP extension for this process only and c
 
 Passwords are hashed. Login attempts are throttled. All form submissions have CSRF protection; access restrictions are enforced on the server. Inactive accounts lose access on their next request. Report pages are not cached.
 
-Users can choose **Create your account** on the sign-in page. Eligibility comes from the agent email in imported Daily CSAT rows (`agent_email`, or `email` when `agent_email` is absent). Emails are trimmed and lowercased; the account name comes from `agent_name`. Repeated report rows create only one roster identity. Blank email values do not grant eligibility. Reports without these optional email columns still import for analytics.
+Users can choose **Create your account** on the sign-in page. Eligibility comes from agent identities in imported source records. Valid email addresses are trimmed and lowercased. Repeated report rows create only one roster identity. Blank email values do not grant eligibility. Administrators can create accounts through **Manage users** when the source has no eligible email identity.
 
 Registration creates an account directly using the sheet email and a confirmed password of 12–72 bytes. Email verification and SMTP configuration are not required. Self-created accounts always have the **user** role. Existing accounts, including inactive ones, cannot register again. Emails are normalized before insertion, and the database unique email constraint prevents duplicate accounts from simultaneous requests. Registration requests are rate limited and protected by CSRF.
 
 The roster is independent of reports, so archiving or deleting a report does not erase eligibility. Administrators should deactivate accounts to revoke access. Without email verification, knowing an eligible email is enough to register it; email ownership is not checked.
 
-Run `php spark migrate` when updating an existing installation. The registration migration builds the roster from valid agent names/emails in previously imported raw rows. New imports keep it updated and reject conflicting names for the same email within a workbook. Administrators can still create accounts through **Manage users**, or `php spark csat:user`. Password reset is not included; users needing recovery should contact their administrator.
+Run `php spark migrate` when updating an existing installation. The registration migration builds the roster from valid agent names/emails in previously imported raw rows. New imports keep it updated. When the same valid email has multiple source name variants, the latest dated response determines the roster display name; each response retains its original source name. Administrators can still create accounts through **Manage users**, or `php spark csat:user`. Password reset is not included; users needing recovery should contact their administrator.
 
 ## MySQL / phpMyAdmin setup
 
@@ -62,26 +90,56 @@ Alternatively, create an empty MySQL database, configure `.env`, and let `php sp
 | --- | --- |
 | `users` | Login identity, hashed password, admin/user role, active status |
 | `imports` | One uploaded report snapshot: filename, file hash, uploader, dates, row count |
-| `responses` | Validated Daily CSAT rows, Good/Bad flags, date, team, agent, channel, raw worksheet values |
+| `responses` | Validated source responses, normalized Good/Bad flags, date, team, agent, channel, raw worksheet values |
 | `migrations` | Created and maintained by CodeIgniter to track schema versions |
 
 Relationships: one user uploads many imports; one import owns many responses. CSAT IDs are unique per import, and file hashes prevent duplicate uploads. The binary UTF-8 collation preserves case distinctions in the source's team names. SQL and migrations use InnoDB-compatible foreign keys; do not combine this schema with unrelated existing tables of the same names.
 
 ## Import contract
 
-- Workbook format: `.xlsx`, maximum 20 MB, maximum expanded ZIP size 100 MB.
-- Worksheet name: exactly **Daily CSAT**, including case and space.
-- Column headings must appear in row 1. Columns may be reordered.
-- Required columns: `Date`, `Team`, `Good`, `Bad`, `agent_name`, `csat_id`, `csat_submission_channel_name`, `is_excluded`.
-- Each nonempty row must contain exactly one Good/Bad response: `1/0` or `0/1`.
-- `is_excluded` must be 0 or 1. **Flagged rows are excluded by default** (only `is_excluded = 0` contributes to the dashboard). The dashboard can separately show unflagged or flagged rows.
-- Date accepts Excel serial dates, `YYYY-MM-DD`, `DD/MM/YYYY`, or `DD Mon YYYY`.
-- `csat_id` must be present and unique within the worksheet. Identifiers are stored as strings; IDs already rounded by Excel cannot be recovered.
-- `l1_name` and `handling_duration_secs` are optional. Other columns from this worksheet are preserved in each response's raw JSON, within a 60 KB row limit.
-- Maximum 15,000 response rows / 100 columns. Blank rows are skipped; invalid nonempty rows reject the entire import.
-- Formulas use their saved Excel result. The importer never evaluates cross-sheet formulas. Recalculate and save the workbook in Excel first if a formula has no cached value.
+- Workbook format: `.xlsx`, up to **128 MiB** compressed. The upload page shows the effective file limit set by the app and the running server.
+- Worksheet name: exactly **Raw Data CSAT**, including case and spaces. Excel uploads and Google Sheets connections use the same fixed name, with no fallback to any other worksheet.
+- Source headings are in row 1. The master workbook uses the following fields; its calculated Good/Bad values and submission date must have saved results.
+- Required source headings: `CSAT Submit Date`, `agent_owner_team`, `Good`, `Bad`, `agent_name`, `csat_id`, `csat_submission_channel_name`, and `is_excluded`. Prepared `Date` and `Team` headings are accepted when their corresponding raw headings are absent; raw headings take precedence when both are present.
+- All other worksheets are ignored. The original workbook is never changed.
+- Limits: **100,000 business response rows**, **200,000 physical worksheet rows**, and **100 columns**. Blank template rows and trailing cells beyond the named source table are skipped.
+- The selected worksheet XML may expand to **512 MiB**, shared strings to **32 MiB**, and the workbook metadata and relationship parts to **1 MiB each**. Other worksheets' expanded sizes are not added to the selected worksheet limit. The importer streams the named worksheet and does not load other worksheet contents.
+- Source records are normalized into response dates, Good/Bad ratings, agent identities, teams, channels, and the recorded DSAT details used by the dashboard.
+- Identifiers are stored as strings; IDs already rounded by Excel cannot be recovered.
+- Identical records with the same CSAT ID count once, and the upload confirmation reports the number skipped. Conflicting records with the same ID reject the import without a partial snapshot.
+- Missing DSAT reasons display **Reason not provided**. Customer comments stay separate from recorded reasons.
+- Formulas use their saved Excel result. The importer never evaluates cross-sheet formulas. Recalculate and save the workbook in Excel first if a required formula has no cached value.
 - Each successful upload creates an independent report snapshot. Identical files are rejected. Overlapping reports can coexist, but the dashboard selects **one snapshot at a time** and never adds them together.
-- Validation happens before a database transaction. Failed imports leave no partial report. The original workbook is not retained; only data from `Daily CSAT` and import metadata are saved outside the public directory.
+- Failed imports leave no partial report. The original workbook is not retained; only data from `Raw Data CSAT` and import metadata are saved outside the public directory. Existing historical snapshots retain their original source data and are not relabelled as Raw Data CSAT imports.
+
+| Master source field | Meaning |
+| --- | --- |
+| `CSAT Submit Date`, `csat_submit_timestamp` | Customer rating submission date and timestamp |
+| `Good`, `Bad`, `csat_level` | Calculated rating flags and source rating |
+| `agent_name`, `agent_email`, `agent_owner_team` | Agent identity and owning team |
+| `csat_id`, `case_id` | Survey identity and related case |
+| `csat_submission_channel_name` | Rating submission channel |
+| `csat_reason` | Recorded customer rating reason |
+| `Inclulde in CSAT?` | Master source inclusion flag: 1 = included, 0 = excluded |
+| `is_excluded` | Original source field retained for provenance; does not control eligibility when the master inclusion flag is present |
+| `handling_duration_secs` | Handling duration when available |
+
+The supplied master source has no dedicated customer comment column. The app displays **No customer comment** when one is absent. If a separate comment field is added, its exact heading can be mapped in the connection settings. A recorded reason is never replaced by an inferred explanation from another field.
+
+The master’s **Inclulde in CSAT?** heading preserves the source spelling. The app uses its inverse for the canonical report exclusion flag. The source excludes `No message sent by user`, `Not answer agent`, `Incomplete Chat`, and `Junk/Spam`. Its original `is_excluded` field remains in the raw record and is not substituted for this inclusion rule. Prepared sources without the master inclusion field use their validated `is_excluded` flag. Unflagged rows remain the default view; **All rows** also includes excluded responses.
+
+The source’s `CSAT Submit Date` is the calendar date of `csat_submit_timestamp` (the workbook formula is `INT` of that timestamp). `Good` and `Bad` use the source’s saved calculated rating results; the app does not use the workbook’s month or week summary worksheets. Optional invalid handling durations become unavailable while the original source value is retained; they do not change rating totals.
+
+The source defines these `csat_reason` codes:
+
+| Code | Recorded reason label |
+| --- | --- |
+| 1 | Long Resolution Time |
+| 2 | Agent attitude can be improved |
+| 3 | Company Policy can be improved |
+| 4 | Courier can be improved |
+
+Comma-separated codes represent multiple selected reasons. Each category counts at most once per DSAT. Reason shares use all matching DSAT responses as their denominator, so shares can add to more than 100%. Unknown source values remain as recorded instead of receiving an invented label. A custom reason-column mapping remains available.
 
 ## Score and charts
 
@@ -95,9 +153,9 @@ Agent search accepts case-insensitive partial names, accents, words in any order
 
 **CSAT = sum(Good) / (sum(Good) + sum(Bad)) × 100**, displayed to two decimal places. No matching responses displays an unavailable score rather than 0%.
 
-Charts show daily CSAT, Good/Bad mix, CSAT for the 12 largest teams by response count, and response counts by **CSAT submission channel**. Team names remain as supplied; case variants are not merged. Agent performance groups by agent name and team, paginated in groups of 25. Date, team, channel, agent search, and row-inclusion filters affect all displayed results.
+Charts show daily, weekly, or monthly CSAT, Good/Bad mix, CSAT for the 12 largest teams by response count, and response counts by channel. Team names remain as supplied; case variants are not merged. Agent performance groups by agent name and team, paginated in groups of 25. Date, team, channel, agent search, and row-inclusion filters affect all displayed results.
 
-The supplied sample contains a single reporting date (6 September 2026), so the trend chart has one point. A multi-date worksheet will show multiple points. This version does not automatically combine daily uploads into a historical series.
+Trend charts use the dates in the selected snapshot. Separate workbook uploads are not automatically combined into a historical series.
 
 ## Manual setup / another server
 
@@ -113,7 +171,7 @@ php -d extension=sqlite3 spark csat:user
 
 Copy `.env.example` to `.env` to customize the URL or use a MySQL database. MySQL settings are documented in that file; create an empty database before running migrations. SQLite and MySQL-compatible migrations are supplied; runtime verification was performed using SQLite.
 
-On a deployed server, set its document root to **public**, enable HTTPS, set `app.baseURL`, and configure secure cookies. Set PHP's `upload_max_filesize=20M`, `post_max_size=22M`, `memory_limit=512M`, and `max_execution_time=120`. Keep `writable` private and back up the database. The PowerShell runner and PHP built-in server are for local development.
+On a deployed server, set its document root to **public**, enable HTTPS, set `app.baseURL`, and configure secure cookies. Set PHP's `upload_max_filesize=128M`, `post_max_size=130M`, `memory_limit=768M`, and `max_execution_time=300`, as supplied in `deploy/php.ini`, for large master workbooks. Restart the PHP/Apache service after changing its configuration. Keep `writable` private and back up the database. The PowerShell runner and PHP built-in server are for local development.
 
 ## Verification
 
@@ -121,14 +179,12 @@ Run from the inner application folder:
 
 ```powershell
 php -d extension=sqlite3 -d memory_limit=512M vendor/phpunit/phpunit/phpunit --no-coverage
-node --test tests/theme.test.cjs tests/dashboard.test.cjs
+node --test tests/theme.test.cjs tests/dashboard.test.cjs tests/sheets-sync.test.cjs
 ```
 
 The tests cover exact sheet selection, long identifiers, missing columns, invalid ratings/dates, duplicate IDs, row limits, weighted CSAT, filters, and authorization.
 
 The optional `tests/smoke_http.py` checks the real HTTP upload/login flow against a **separate** `writable/csat-smoke.sqlite` database. The `CsatSmokeSeeder` refuses to seed any other database. Its example.test accounts are testing fixtures, not application credentials. Do not expose that test database or use its accounts in production.
 
-The provided workbook was verified through the HTTP uploader in the isolated test database: **4,786 responses, 3,605 Good, 1,181 Bad, 75.32% CSAT** with all rows included. It was not modified or bundled into the repository.
-
-Implementation references: [PhpSpreadsheet worksheet selection](https://phpspreadsheet.readthedocs.io/en/latest/topics/reading-files/#reading-only-named-worksheets-from-a-file) and [Chart.js integration](https://www.chartjs.org/docs/latest/getting-started/integration).
+Implementation reference: [Chart.js integration](https://www.chartjs.org/docs/latest/getting-started/integration).
 

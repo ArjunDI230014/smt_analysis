@@ -2,7 +2,7 @@
     let charts = [];
     const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)');
     const count = value => Number(value).toLocaleString();
-    const percent = value => Number(value).toFixed(2) + '%';
+    const percent = value => value === null || value === undefined ? '—' : Number(value).toFixed(2) + '%';
     const palette = () => {
         const styles = getComputedStyle(document.documentElement);
         const color = (name, fallback) => styles.getPropertyValue(name).trim() || fallback;
@@ -60,7 +60,10 @@
         if (!data || !error) return;
         if (!window.Chart) { error.hidden = false; return; }
         try {
-            const { summary, groups } = JSON.parse(data.textContent);
+            const { summary, groups, period = 'daily' } = JSON.parse(data.textContent);
+            const periodName = { daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly' }[period] || 'Daily';
+            const periodUnit = { daily: 'days', weekly: 'weeks beginning Monday', monthly: 'calendar months' }[period] || 'days';
+            const ratedTotal = Number(summary.good) + Number(summary.bad);
             const colors = palette();
             Chart.defaults.font.family = 'Segoe UI, Arial, sans-serif';
             const base = (callbacks = {}, legend = false) => ({
@@ -86,12 +89,12 @@
                 type: 'line',
                 data: { labels: groups.trend.map(row => row.label), datasets: [{ label: 'CSAT', data: groups.trend.map(row => row.score), borderColor: colors.accent, backgroundColor: fillColor(colors.accent), fill: true, tension: 0.25, pointRadius: 4, pointHitRadius: 12, pointHoverRadius: 6, pointBackgroundColor: colors.accent, borderWidth: 2 }] },
                 options: { ...base({ label: context => `${percent(context.parsed.y)} CSAT · ${count(groups.trend[context.dataIndex].total)} responses` }), scales: { x: labelsAxis(), y: scoreAxis() } },
-            }, `Daily CSAT trend across ${count(groups.trend.length)} dates. Overall CSAT: ${percent(summary.score)}.`);
+            }, `${periodName} CSAT trend across ${count(groups.trend.length)} ${periodUnit}. Overall CSAT: ${percent(summary.score)}.`);
 
             create('mix-chart', 'mix', {
                 type: 'doughnut',
                 data: { labels: ['Good', 'Bad'], datasets: [{ data: [Number(summary.good), Number(summary.bad)], backgroundColor: [colors.positive, colors.negative], borderWidth: 4, borderColor: colors.surface, borderRadius: 5 }] },
-                options: { ...base({ label: context => `${context.label}: ${count(context.parsed)} responses (${percent(context.parsed / Number(summary.total) * 100)})` }, true), cutout: '73%', interaction: { mode: 'nearest', intersect: true } },
+                options: { ...base({ label: context => `${context.label}: ${count(context.parsed)} responses (${percent(ratedTotal > 0 ? context.parsed / ratedTotal * 100 : null)})` }, true), cutout: '73%', interaction: { mode: 'nearest', intersect: true } },
             }, `Feedback mix: ${count(summary.good)} Good and ${count(summary.bad)} Bad ratings.`);
 
             create('team-chart', 'team', {

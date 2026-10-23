@@ -22,7 +22,7 @@ The dashboard checks for due updates when opened and every minute while visible.
 .\deploy\install-sheet-sync-task.ps1
 ```
 
-This runs `deploy/sync-sheets.ps1` once a minute; `php spark csat:sync` decides whether a refresh is due. The task is hidden and runs with the current user's normal privileges while that user is signed in. Keep the computer awake and connected. Run it again to update its registered path after moving the app. To remove it, run `Unregister-ScheduledTask -TaskName 'Summit Analytics Google Sheets Sync' -Confirm:$false`.
+This runs `spark csat:sync` once a minute with `php-win.exe`, the windowless PHP CLI beside `php.exe`; the command decides whether a refresh is due. No PowerShell or console window opens for scheduled checks. The task runs with the current user's normal privileges while that user is signed in. Keep the computer awake and connected. Run the installer again after updating an older PowerShell-based task or moving the app or PHP installation. Use `deploy/sync-sheets.ps1` for a manual run with visible output. To remove the task, run `Unregister-ScheduledTask -TaskName 'Summit Analytics Google Sheets Sync' -Confirm:$false`.
 
 On another server, schedule `php -d memory_limit=768M spark csat:sync` every minute with the app directory as working directory. Use `php -d memory_limit=768M spark csat:sync --force` for a manual command-line refresh. Pausing the connection prevents both scheduled and forced syncs. A file lock prevents concurrent refreshes; failed requests retry after at least a minute and preserve the last successful report.
 

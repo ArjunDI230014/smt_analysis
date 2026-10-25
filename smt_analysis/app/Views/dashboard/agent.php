@@ -5,7 +5,7 @@
 <section class="panel"><div class="panel-heading"><div><h2>Account information</h2><p><?= $account ? esc(ucfirst($account['role'])) . ' · ' . ($account['archived'] ? 'Archived' : ($account['active'] ? 'Active' : 'Inactive')) : 'No registered account linked to this report identity.' ?></p></div><?php if ($account): ?><a class="text-link" href="<?= esc(site_url('admin/users') . '?' . http_build_query(['q' => $account['email']])) ?>">Manage account →</a><?php endif ?></div></section>
 <p class="method-note">Performance in the selected report and filters. <?= $identity['agent_email'] ? 'Matched by agent email and name.' : 'This report has no email for this agent; matching rows share this exact name.' ?></p>
 <form class="panel agent-period-form" method="get" action="<?= \App\Libraries\Modules::url('admin/agents/' . $identity['id']) ?>" aria-label="Agent report filters">
-    <?php foreach (['scope', 'team', 'channel', 'tab'] as $key): ?><input type="hidden" name="<?= $key ?>" value="<?= esc($filters[$key]) ?>"><?php endforeach ?>
+    <?= view('dashboard/filter-fields', ['values' => $filters, 'omit' => ['from', 'to', 'period', 'agent', 'dsat_page']]) ?>
     <label>From<input type="date" name="from" value="<?= esc($filters['from']) ?>"></label>
     <label>To<input type="date" name="to" value="<?= esc($filters['to']) ?>"></label>
     <label>View<select name="period"><?php foreach (['daily' => 'Daily', 'weekly' => 'Weekly', 'monthly' => 'Monthly'] as $key => $label): ?><option value="<?= $key ?>" <?= $period === $key ? 'selected' : '' ?>><?= $label ?></option><?php endforeach ?></select></label>
@@ -18,8 +18,13 @@
 <article class="kpi"><div>Good ratings</div><strong><?= number_format($summary['good']) ?></strong><p>Positive feedback</p></article>
 <article class="kpi"><div>Bad ratings</div><strong><?= number_format($summary['bad']) ?></strong><p>Opportunities to improve</p></article>
 </section>
+<?= view('dashboard/agent-insights', ['summary' => $summary, 'groups' => $groups, 'dsat' => $dsat, 'filters' => $filters, 'personal' => false, 'reasonBaseUrl' => \App\Libraries\Modules::url('admin/agents/' . $identity['id']), 'reasonQuery' => $filters]) ?>
 <?= view('dashboard/dsat', ['dsat' => $dsat, 'summary' => $summary, 'groups' => $groups, 'filters' => $filters, 'personal' => false, 'showDsatAgents' => false, 'dsatBaseUrl' => \App\Libraries\Modules::url('admin/agents/' . $identity['id'])]) ?>
 <?php foreach (['trend' => $periodLabel . ' performance', 'teams' => 'Teams', 'channels' => 'Channels'] as $key => $heading): ?>
 <section class="panel agent-detail-panel"><div class="panel-heading"><h2 id="agent-<?= $key ?>-heading"><?= $heading ?></h2></div><div class="table-scroll" role="region" aria-labelledby="agent-<?= $key ?>-heading" tabindex="0"><table><thead><tr><th scope="col"><?= $key === 'trend' ? ['daily' => 'Date', 'weekly' => 'Week of (Monday)', 'monthly' => 'Month'][$period] : 'Name' ?></th><th scope="col" class="number">Responses</th><th scope="col" class="number">Good</th><th scope="col" class="number">Bad</th><th scope="col" class="number">CSAT</th></tr></thead><tbody><?php foreach ($groups[$key] as $row): ?><tr><td><?= esc($row['label']) ?></td><td class="number"><?= number_format($row['total']) ?></td><td class="number"><?= number_format($row['good']) ?></td><td class="number"><?= number_format($row['bad']) ?></td><td class="number score"><?= $row['score'] !== null ? number_format($row['score'], 2) . '%' : '—' ?></td></tr><?php endforeach ?><?php if (!$groups[$key]): ?><tr><td colspan="5">No responses match these filters.</td></tr><?php endif ?></tbody></table></div></section>
 <?php endforeach ?>
+<?= $this->endSection() ?>
+<?= $this->section('scripts') ?>
+<script src="<?= base_url('assets/vendor/chart.umd.min.js') ?>" defer></script>
+<script src="<?= base_url('assets/agent-performance.js') ?>?v=<?= filemtime(FCPATH . 'assets/agent-performance.js') ?>" defer></script>
 <?= $this->endSection() ?>

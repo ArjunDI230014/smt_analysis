@@ -41,6 +41,7 @@
             const names = next.getElementById('agent-names');
             const agentNames = names ? JSON.parse(names.textContent) : [];
             window.destroyDashboardCharts?.();
+            window.destroyAgentPerformanceCharts?.();
             results.replaceChildren(...content.childNodes);
             results.dataset.responseCount = content.dataset.responseCount;
             results.dataset.agentCount = content.dataset.agentCount;
@@ -50,6 +51,7 @@
             const data = next.getElementById('report-data');
             if (data) document.body.append(data);
             window.renderDashboard?.();
+            window.renderAgentPerformance?.();
             if (url.href !== location.href) history[push ? 'pushState' : 'replaceState'](null, '', url);
             document.dispatchEvent(new CustomEvent('dashboard:updated', {detail: {agentNames}}));
             const count = Number(content.dataset.responseCount).toLocaleString();

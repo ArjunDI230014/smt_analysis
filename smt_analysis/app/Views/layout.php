@@ -9,6 +9,8 @@
     <link rel="stylesheet" href="<?= base_url('assets/app.css') ?>">
     <link rel="stylesheet" href="<?= base_url('assets/enhancements.css') ?>?v=<?= filemtime(FCPATH . 'assets/enhancements.css') ?>">
     <link rel="stylesheet" href="<?= base_url('assets/dsat.css') ?>?v=<?= filemtime(FCPATH . 'assets/dsat.css') ?>">
+    <link rel="stylesheet" href="<?= base_url('assets/report-tools.css') ?>?v=<?= filemtime(FCPATH . 'assets/report-tools.css') ?>">
+    <link rel="stylesheet" href="<?= base_url('assets/agent-performance.css') ?>?v=<?= filemtime(FCPATH . 'assets/agent-performance.css') ?>">
     <link rel="stylesheet" href="<?= base_url('assets/sheets.css') ?>?v=<?= filemtime(FCPATH . 'assets/sheets.css') ?>">
     <link rel="stylesheet" href="<?= base_url('assets/modules.css') ?>?v=<?= filemtime(FCPATH . 'assets/modules.css') ?>">
     <script src="<?= base_url('assets/workspace.js') ?>?v=<?= filemtime(FCPATH . 'assets/workspace.js') ?>" defer></script>

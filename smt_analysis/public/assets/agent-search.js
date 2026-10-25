@@ -32,15 +32,16 @@
         list.replaceChildren();
         active = -1;
         input.removeAttribute('aria-activedescendant');
+        if (input.value.includes('@')) { close(); hint.textContent = 'Searching agent emails…'; return; }
         const query = normalize(input.value);
-        if (!query) { close(); hint.textContent = 'Partial names, any word order, or small typos. Press / to focus search.'; return; }
+        if (!query) { close(); hint.textContent = 'Search by name or email. Small name typos are supported.'; return; }
         const terms = query.split(' ');
         const matches = names.filter(({normalized}) => terms.every(term => {
             if (normalized.includes(term)) return true;
             const allowed = term.length >= 7 ? 2 : (term.length >= 4 ? 1 : 0);
             return allowed > 0 && normalized.split(' ').some(word => distance(term, word) <= allowed);
         }));
-        hint.textContent = matches.length ? `${matches.length} matching names. Enter searches all; arrows select a suggestion.` : 'No matching names in these filters. Try fewer letters or Reset.';
+        hint.textContent = matches.length ? `${matches.length} matching names. Enter searches all; arrows select a suggestion.` : 'No name suggestions. Email search is also supported.';
         matches.slice(0, 10).forEach(({name}, index) => {
             const item = document.createElement('li');
             item.id = `agent-option-${index}`;

@@ -1,0 +1,24 @@
+.executive-quick-views { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 0 0 24px; }
+.executive-quick-views > span { margin-right: 4px; font-size: 12px; font-weight: 600; color: var(--muted); }
+.executive-quick-views a { padding: 8px 12px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); font-size: 12px; font-weight: 600; color: var(--ink); }
+.executive-quick-views a:hover { border-color: var(--accent-line); background: var(--accent-soft); color: var(--accent-text); }
+.report-link-tools { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; border-top: 1px solid var(--line); padding-top: 15px; margin-top: 15px; }
+.table-filter-form { border-block: 1px solid var(--line); background: var(--surface-soft); padding: 18px 24px; }
+.table-filter-form > p { margin: 0 0 14px; color: var(--muted); font-size: 12px; }
+.table-filter-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 14px; align-items: end; }
+.table-filter-grid label { font-size: 11px; }
+.table-filter-grid input, .table-filter-grid select { height: 40px; background: var(--surface); }
+.table-search-field { grid-column: span 2; }
+.table-filter-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 16px; margin-top: 15px; }
+.table-filter-status { padding: 12px 24px; margin: 0; color: var(--muted); font-size: 12px; border-bottom: 1px solid var(--line); }
+.dsat-details { scroll-margin-top: 95px; }
+.table-empty { padding: 30px 24px; text-align: center; }
+.table-empty h3 { font-size: 15px; margin: 0 0 8px; }
+.table-empty p { margin: 0; color: var(--muted); font-size: 12px; }
+.sort-link { display: inline-flex; align-items: center; gap: 6px; font: inherit; color: inherit; white-space: nowrap; }
+.sort-link:hover { color: var(--accent-text); }
+th[aria-sort] .sort-link { color: var(--accent-text); }
+.reason-drilldown { color: var(--accent-text); text-decoration: underline; text-underline-offset: 3px; }
+.agent-panel .panel-heading > .text-link { flex-shrink: 0; white-space: nowrap; }
+@media (max-width: 850px) { .table-filter-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media (max-width: 600px) { .table-filter-form { padding: 16px; } .table-filter-grid { gap: 12px; } .table-filter-status { padding-inline: 16px; } }

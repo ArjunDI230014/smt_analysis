@@ -154,17 +154,25 @@ Comma-separated codes represent multiple selected reasons. Each category counts 
 
 Use the light/dark toggle in the workspace header (top-right on sign-in pages) to switch appearance. The initial theme follows your device's appearance; manual choices are remembered and synchronized across browser tabs. Dark mode uses charcoal surfaces and the orange accent `#EE4D2D`. Charts follow the theme while Good and Bad ratings keep distinct green and coral colors.
 
-Both Shopee Food and Marketplace dashboards open on **Statistics**, which shows the charts. **DSAT feedback** and **Agent performance** have separate tabs that share the selected report and filters. Detailed tables scroll within a bounded area with sticky column headers; DSAT feedback keeps 50 responses per page, and Agent performance keeps 25 agent/team combinations per page.
+Both Shopee Food and Marketplace dashboards open on **Statistics**, which shows the charts. **DSAT feedback** and **Agent performance** have separate tabs that share the selected report and filters. Detailed tables scroll within a bounded area with sticky column headers. Choose 10, 25, 50, or 100 rows per page; the defaults are 50 DSAT responses and 25 agent/team combinations.
 
-Quick date ranges show the entire report, its last 7 days, or its last 30 days, ending on the report's latest date. Applied filter chips show what contributes to the current results and can be removed individually. Agent search updates scores and the selected tab's results as you type; press `/` to focus search or use the clear button to show all agents. Date ranges are checked before applying. On smaller screens, administrators can use **Menu** to open workspace navigation.
+Quick date ranges show the entire report or its last 7, 30, or 90 days, ending on the report's latest date. Applied filter chips show what contributes to the current results and can be removed individually. Agent search updates scores and the selected tab's results as you type; press `/` to focus search or use the clear button to show all agents. Date ranges are checked before applying. **Copy view link** copies the current module, report, tab, and applied filters from the browser address; apply pending filter changes first. On smaller screens, administrators can use **Menu** to open workspace navigation.
 
 The report uploader accepts a single workbook through the file picker or drag and drop. It previews the filename and size, supports clearing the selection, and reports format or file-size problems before submission. Server-side workbook validation still runs on every import.
 
-Agent search accepts case-insensitive partial names, accents, words in any order, and small spelling mistakes (one edit for words of 4–6 characters, two for longer words). All entered words must match. Suggestions appear as you type; press Enter to search all similar names, or select a suggestion with the mouse or arrow keys and Enter. Suggestions reflect the last applied report/date/team/channel/inclusion filters. Apply filters after changing those settings to refresh available agents. The results show the number of matching names, and all scores and charts use the same matches.
+Agent search accepts names or email addresses. Name matching supports case-insensitive partial names, accents, words in any order, and small spelling mistakes (one edit for words of 4–6 characters, two for longer words). All entered words must match. Name suggestions appear as you type; press Enter to search all similar names, or select a suggestion with the mouse or arrow keys and Enter. Queries containing `@` use literal, case-insensitive email matching without name suggestions. Suggestions reflect the last applied report/date/team/channel/inclusion filters. Apply filters after changing those settings to refresh available agents. The results show the number of matching identities, and all scores and charts use the same matches.
+
+Each detailed table also has its own controls. **Agent performance** can narrow results by minimum response volume or maximum CSAT and sort by responses, CSAT, DSAT, or name. **DSAT feedback** can search the recorded feedback and identifiers, select a reason, filter by whether a customer comment exists, and sort by date, agent, or reason. Apply these controls to update the table and its pagination. They preserve the shared report and filters and do not change the overall score cards, charts, DSAT totals, or reason shares.
+
+**Quick views** open the lowest CSAT, CSAT at or below 80% with at least 10 responses, the most DSATs, or the latest feedback. The threshold is shown explicitly and can be changed in the agent table controls. Click sortable column headings to change order, or a ranked DSAT reason to inspect matching feedback. Sorting and table filters apply across all matching records before pagination.
 
 **CSAT = sum(Good) / (sum(Good) + sum(Bad)) × 100**, displayed to two decimal places. No matching responses displays an unavailable score rather than 0%.
 
-Charts show daily, weekly, or monthly CSAT, Good/Bad mix, CSAT for the 12 largest teams by response count, and response counts by channel. Team names remain as supplied; case variants are not merged. Agent performance groups by agent name and team, paginated in groups of 25. Date, team, channel, agent search, and row-inclusion filters affect all displayed results.
+Charts show daily, weekly, or monthly CSAT, Good/Bad mix, CSAT for the 12 largest teams by response count, and response counts by channel. Team names remain as supplied; case variants are not merged. Agent performance groups by agent name and team. Date, team, channel, agent search, and row-inclusion filters affect all displayed results.
+
+Agents see their **top four DSAT reasons** with response counts, percentage shares, and horizontal bars on their Statistics and Agent performance views. Individual agent pages include the same reason ranking, CSAT trend, Good/Bad mix, response volume over time, and feedback by channel. Click a ranked reason to inspect its feedback. Missing reasons are shown as **Reason not provided**, and multi-reason feedback counts once in each selected category. Performance charts and reason totals follow the report filters; feedback table searches do not change the rankings.
+
+The administrator's Agent performance table also shows each agent/team combination's top four reasons with counts and a CSAT meter. Comparison charts show the first 12 combinations on the current page in the chosen table order, using the same table filters. Change the sort or page to compare another set of agents.
 
 Trend charts use the dates in the selected snapshot. Separate workbook uploads are not automatically combined into a historical series.
 
@@ -190,7 +198,7 @@ Run from the inner application folder:
 
 ```powershell
 php -d extension=sqlite3 -d memory_limit=512M vendor/phpunit/phpunit/phpunit --no-coverage
-node --test tests/theme.test.cjs tests/dashboard.test.cjs tests/sheets-sync.test.cjs
+node --test tests/theme.test.cjs tests/dashboard.test.cjs tests/dashboard-qol.test.cjs tests/agent-search.test.cjs tests/sheets-sync.test.cjs
 ```
 
 The tests cover exact sheet selection, long identifiers, missing columns, invalid ratings/dates, duplicate IDs, row limits, weighted CSAT, filters, and authorization.

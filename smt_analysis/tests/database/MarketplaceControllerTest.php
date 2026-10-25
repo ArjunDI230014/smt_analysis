@@ -222,6 +222,145 @@ final class MarketplaceControllerTest extends CIUnitTestCase
         }
     }
 
+    public function testExecutiveTableControlsPreserveReportScopeAndResetPaginationInBothModules(): void
+    {
+        $agentKeys = ['agent_sort', 'min_responses', 'max_csat', 'agent_page_size'];
+        $feedbackKeys = ['dsat_search', 'dsat_reason', 'dsat_comments', 'dsat_sort', 'dsat_page_size'];
+        foreach (['shopee-food' => '/dashboard', 'marketplace' => '/marketplace/dashboard'] as $module => $path) {
+            $raw = ['dsat_reason' => 'Executive reason ' . $module, 'customer_comment' => 'Owned executive feedback', 'case_id' => 'EXEC-' . $module];
+            $this->db->table('responses')->where('id', $this->responses[$module])->update([
+                'good' => 0, 'bad' => 1, 'raw_json' => json_encode($raw),
+            ]);
+            $template = $this->db->table('responses')->where('id', $this->responses[$module])->get()->getRowArray();
+            unset($template['id']);
+            for ($i = 1; $i <= 11; $i++) {
+                $this->db->table('responses')->insert(array_replace($template, [
+                    'source_row' => $i + 2, 'agent_name' => sprintf('Executive Agent %02d', $i), 'csat_id' => 'executive-' . $i,
+                ]));
+            }
+            $shared = ['import' => $this->reports[$module], 'from' => '2026-10-24', 'to' => '2026-10-24',
+                'team' => $module . '-team', 'channel' => 'Chat', 'scope' => 'all', 'period' => 'monthly', 'agent' => 'user@example.test'];
+            $tables = ['agent_sort' => 'csat_asc', 'min_responses' => '1', 'max_csat' => '80', 'agent_page_size' => '10',
+                'dsat_search' => 'Owned executive', 'dsat_reason' => $raw['dsat_reason'], 'dsat_comments' => 'with',
+                'dsat_sort' => 'oldest', 'dsat_page_size' => '10'];
+            foreach (['agents' => 'agent-table-filters', 'dsat' => 'dsat-table-filters'] as $tab => $formId) {
+                $result = $this->withSession(['user_id' => $this->adminId])->get($path . '?' . http_build_query($shared + $tables + ['tab' => $tab]));
+                $result->assertOK();
+                $body = $result->getBody();
+                $document = new \DOMDocument();
+                @$document->loadHTML($body);
+                $xpath = new \DOMXPath($document);
+                $form = $xpath->query('//*[@id="' . $formId . '"]')->item(0);
+                self::assertNotNull($form);
+                self::assertSame(parse_url(site_url(ltrim($path, '/')), PHP_URL_PATH), parse_url($form->getAttribute('action'), PHP_URL_PATH));
+                foreach ($shared as $key => $value) {
+                    self::assertSame((string) $value, $xpath->query('.//input[@type="hidden"][@name="' . $key . '"]', $form)->item(0)->getAttribute('value'));
+                }
+                self::assertCount(0, $xpath->query('.//*[@name="page" or @name="dsat_page"]', $form));
+                self::assertSame($tab, $xpath->query('.//input[@name="tab"]', $form)->item(0)->getAttribute('value'));
+                self::assertCount(1, $xpath->query('//label[@for="agent-search"][normalize-space(.)="Agent name or email"]'));
+                self::assertCount(1, $xpath->query('//*[@id="dashboard-filters"]//*[@name="agent"]'));
+                self::assertCount(1, $xpath->query('//*[@id="copy-report-link"]'));
+                self::assertCount(0, $xpath->query('//*[@id="dashboard-results"]//*[@id="copy-report-link"]'));
+                $rowSelector = $tab === 'agents' ? '//*[@id="agent-performance"]//tbody/tr' : '//table[contains(@class,"dsat-detail-table")]//tbody/tr';
+                self::assertCount(10, $xpath->query($rowSelector));
+                self::assertStringContainsString('1–10 of 12', html_entity_decode($body, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+                foreach ($xpath->query('//*[@id="' . ($tab === 'agents' ? 'agent-performance' : 'dsat-details') . '"]//a[contains(@class,"sort-link")]') as $link) {
+                    self::assertSame(parse_url(site_url(ltrim($path, '/')), PHP_URL_PATH), parse_url($link->getAttribute('href'), PHP_URL_PATH));
+                    parse_str((string) parse_url($link->getAttribute('href'), PHP_URL_QUERY), $sortQuery);
+                    foreach ($shared as $key => $value) { self::assertSame((string) $value, $sortQuery[$key]); }
+                    self::assertSame($tab, $sortQuery['tab']);
+                    self::assertSame('1', $sortQuery[$tab === 'agents' ? 'page' : 'dsat_page']);
+                    foreach ($tables as $key => $value) {
+                        if ($key !== ($tab === 'agents' ? 'agent_sort' : 'dsat_sort')) { self::assertSame($value, $sortQuery[$key]); }
+                    }
+                }
+                $resetLabel = $tab === 'agents' ? 'Reset agent table' : 'Reset feedback table';
+                $reset = $xpath->query('//a[normalize-space(.)="' . $resetLabel . '"]')->item(0);
+                self::assertNotNull($reset);
+                parse_str((string) parse_url($reset->getAttribute('href'), PHP_URL_QUERY), $resetQuery);
+                foreach ($shared as $key => $value) { self::assertSame((string) $value, $resetQuery[$key]); }
+                foreach ($tab === 'agents' ? $agentKeys : $feedbackKeys as $key) { self::assertArrayNotHasKey($key, $resetQuery); }
+                foreach ($tab === 'agents' ? $feedbackKeys : $agentKeys as $key) { self::assertSame($tables[$key], $resetQuery[$key]); }
+                self::assertArrayNotHasKey('page', $resetQuery);
+                self::assertArrayNotHasKey('dsat_page', $resetQuery);
+                $next = $xpath->query('//nav[@aria-label="' . ($tab === 'agents' ? 'Agent performance pages' : 'DSAT feedback pages') . '"]//a[@rel="next"]')->item(0);
+                self::assertNotNull($next);
+                parse_str((string) parse_url($next->getAttribute('href'), PHP_URL_QUERY), $nextQuery);
+                foreach ($shared + $tables as $key => $value) { self::assertSame((string) $value, $nextQuery[$key]); }
+                self::assertSame('2', $nextQuery[$tab === 'agents' ? 'page' : 'dsat_page']);
+                self::assertStringContainsString('CSAT ≤80% · 10+ responses', html_entity_decode($body, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+                $presetMatched = false;
+                foreach ($xpath->query('//nav[@aria-label="Quick report views"]//a') as $preset) {
+                    parse_str((string) parse_url($preset->getAttribute('href'), PHP_URL_QUERY), $presetQuery);
+                    if (($presetQuery['max_csat'] ?? '') === '80' && ($presetQuery['min_responses'] ?? '') === '10') {
+                        $presetMatched = true;
+                        self::assertSame('csat_asc', $presetQuery['agent_sort']);
+                        self::assertSame('agents', $presetQuery['tab']);
+                        self::assertSame('1', $presetQuery['page']);
+                        self::assertSame('1', $presetQuery['dsat_page']);
+                        foreach ($shared as $key => $value) { self::assertSame((string) $value, $presetQuery[$key]); }
+                    }
+                }
+                self::assertTrue($presetMatched);
+            }
+            foreach ([['tab' => 'agents', 'min_responses' => '100'], ['tab' => 'dsat', 'dsat_search' => 'No such feedback']] as $emptyFilter) {
+                $result = $this->withSession(['user_id' => $this->adminId])->get($path . '?' . http_build_query($shared + $emptyFilter));
+                $result->assertOK();
+                self::assertStringContainsString('data-response-count="12"', $result->getBody());
+                self::assertStringContainsString('0–0 of 0', html_entity_decode($result->getBody(), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+                self::assertStringContainsString($emptyFilter['tab'] === 'agents' ? 'No agents match these table filters' : 'No feedback matches these table filters', $result->getBody());
+            }
+        }
+    }
+
+    public function testExecutiveFiltersRemainOwnedAndSurviveAgentDateChanges(): void
+    {
+        foreach (['shopee-food' => '/dashboard', 'marketplace' => '/marketplace/dashboard'] as $module => $path) {
+            $this->db->table('responses')->where('id', $this->responses[$module])->update([
+                'good' => 0, 'bad' => 1, 'raw_json' => json_encode(['dsat_reason' => 'Owned reason', 'customer_comment' => 'Owned executive feedback']),
+            ]);
+            $foreign = $this->db->table('responses')->where('id', $this->responses[$module])->get()->getRowArray();
+            unset($foreign['id']);
+            $this->db->table('responses')->insert(array_replace($foreign, ['csat_id' => 'private-executive',
+                'agent_name' => 'Private Executive Agent', 'agent_email' => 'other@example.test',
+                'raw_json' => json_encode(['dsat_reason' => 'Private executive reason', 'customer_comment' => 'Private executive feedback'])]));
+            $criteria = ['agent_sort' => 'csat_desc', 'min_responses' => '1', 'max_csat' => '80', 'agent_page_size' => '10',
+                'dsat_search' => 'Owned executive', 'dsat_reason' => 'Owned reason', 'dsat_comments' => 'with',
+                'dsat_sort' => 'oldest', 'dsat_page_size' => '10'];
+            foreach (['agents', 'dsat'] as $tab) {
+                $viewer = $this->withSession(['user_id' => $this->viewerId])->get($path . '?' . http_build_query($criteria + ['tab' => $tab, 'agent' => 'other@example.test']));
+                $viewer->assertOK();
+                self::assertStringContainsString('data-response-count="1"', $viewer->getBody());
+                self::assertStringNotContainsString('Private Executive Agent', $viewer->getBody());
+                self::assertStringNotContainsString('Private executive feedback', $viewer->getBody());
+                self::assertStringNotContainsString('Private executive reason', $viewer->getBody());
+                self::assertStringNotContainsString('name="agent"', $viewer->getBody());
+                self::assertStringContainsString($tab === 'dsat' ? 'Owned executive feedback' : $module . '-agent', $viewer->getBody());
+            }
+            $detailsPath = ($module === 'marketplace' ? '/marketplace' : '') . '/admin/agents/' . $this->responses[$module];
+            $shared = ['team' => $module . '-team', 'channel' => 'Chat', 'scope' => 'all', 'from' => '2026-10-24', 'to' => '2026-10-24', 'period' => 'monthly'];
+            $details = $this->withSession(['user_id' => $this->adminId])->get($detailsPath . '?' . http_build_query($criteria + $shared + ['tab' => 'agents']));
+            $details->assertOK();
+            $document = new \DOMDocument();
+            @$document->loadHTML($details->getBody());
+            $xpath = new \DOMXPath($document);
+            $form = $xpath->query('//form[@aria-label="Agent report filters"]')->item(0);
+            self::assertNotNull($form);
+            foreach ($criteria as $key => $value) {
+                self::assertSame($value, $xpath->query('.//input[@type="hidden"][@name="' . $key . '"]', $form)->item(0)->getAttribute('value'));
+            }
+            self::assertSame(parse_url(site_url(ltrim($detailsPath, '/')), PHP_URL_PATH), parse_url($form->getAttribute('action'), PHP_URL_PATH));
+            $back = $xpath->query('//a[contains(normalize-space(.),"Agent performance")]')->item(0);
+            self::assertNotNull($back);
+            parse_str((string) parse_url($back->getAttribute('href'), PHP_URL_QUERY), $backQuery);
+            self::assertSame(parse_url(site_url(ltrim($path, '/')), PHP_URL_PATH), parse_url($back->getAttribute('href'), PHP_URL_PATH));
+            foreach ($criteria + $shared as $key => $value) { self::assertSame($value, $backQuery[$key]); }
+            self::assertSame('agents', $backQuery['tab']);
+            self::assertSame((string) $this->reports[$module], $backQuery['import']);
+        }
+    }
+
     public function testOtherModuleReportAndAgentIdsCannotBeOpened(): void
     {
         foreach ([

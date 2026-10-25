@@ -9,6 +9,26 @@
     const status = document.getElementById('filter-status');
     const apply = form.querySelector('button[type="submit"]');
     const initialStatus = status.textContent;
+    const copyLink = document.getElementById('copy-report-link');
+    const copyStatus = form.querySelector('[data-copy-status]');
+    if (copyLink && copyStatus) {
+        copyLink.addEventListener('click', async event => {
+            event.preventDefault();
+            copyLink.disabled = true;
+            copyStatus.textContent = '';
+            try {
+                const clipboard = window.navigator?.clipboard;
+                if (!clipboard?.writeText) throw new Error('Clipboard unavailable');
+                await clipboard.writeText(window.location.href);
+                copyStatus.textContent = 'View link copied.';
+            } catch (_) {
+                copyStatus.textContent = 'Could not copy the link. Copy the address from your browser.';
+            } finally {
+                copyLink.disabled = false;
+            }
+        });
+        document.addEventListener('dashboard:updated', () => { copyStatus.textContent = ''; });
+    }
     let preferredRange = null;
     const rangeStart = days => {
         const date = new Date(`${form.dataset.reportTo}T00:00:00Z`);

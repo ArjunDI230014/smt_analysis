@@ -205,6 +205,8 @@ The tests cover exact sheet selection, long identifiers, missing columns, invali
 
 For browser checks of themed form controls, run `node tests/form-controls.browser.cjs` with Playwright available and Chrome installed. Set `PLAYWRIGHT_MODULE` to an absolute package path if it is outside the normal Node module search path; `BROWSER_CHANNEL` can select another installed Playwright browser channel. These checks use an isolated HTML fixture with the app’s real assets, covering keyboard navigation, search, date boundaries, form validation, dynamic updates, and narrow screens without accessing the app database.
 
+Run `node tests/theme-transition.browser.cjs` with the same browser setup to verify theme fades, chart synchronization, rapid toggles, the CSS fallback, and reduced-motion preferences.
+
 The optional `tests/smoke_http.py` checks the real HTTP upload/login flow against a **separate** `writable/csat-smoke.sqlite` database. The `CsatSmokeSeeder` refuses to seed any other database. Its example.test accounts are testing fixtures, not application credentials. Do not expose that test database or use its accounts in production.
 
 Implementation reference: [Chart.js integration](https://www.chartjs.org/docs/latest/getting-started/integration).

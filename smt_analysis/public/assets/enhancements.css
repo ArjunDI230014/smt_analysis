@@ -113,7 +113,20 @@ h2 { font-weight: 650; }
 .theme-toggle:hover { background: var(--accent-soft); color: var(--accent-text); box-shadow: none; }
 .theme-icon { display: inline-block; font-size: 18px; line-height: 1; }
 .auth-appearance { position: absolute; right: 28px; top: 22px; z-index: 30; }
-html.theme-transition :is(body,.sidebar,.topbar,.panel,.kpi,.button,input,select,th,td,.appearance-controls,.theme-toggle,.login-story,.login-layout) { transition: background-color .2s ease, color .2s ease, border-color .2s ease; }
+/* Fallback for browsers without page snapshots: animate colors throughout the workspace. */
+html.theme-transition body, html.theme-transition body *, html.theme-transition body *::before, html.theme-transition body *::after {
+    transition-property: background-color, color, border-color, box-shadow, fill, stroke, outline-color, text-decoration-color;
+    transition-duration: 360ms;
+    transition-timing-function: cubic-bezier(.4, 0, .2, 1);
+    transition-delay: 0s;
+}
+/* Keep the old page opaque while the new appearance fades over it to avoid a flash. */
+::view-transition { pointer-events: none; }
+::view-transition-old(root) { animation: none; }
+::view-transition-new(root) { animation: theme-fade-in 360ms cubic-bezier(.4, 0, .2, 1) both; }
+::view-transition-image-pair(root) { isolation: isolate; }
+::view-transition-old(root), ::view-transition-new(root) { mix-blend-mode: normal; }
+@keyframes theme-fade-in { from { opacity: 0; } to { opacity: 1; } }
 .button, .brand-mark { color: var(--on-accent); background: var(--accent); border-color: var(--accent); }
 .button { min-height: 42px; border-radius: 8px; padding: 10px 16px; font-size: 12px; font-weight: 650; }
 .button:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
@@ -365,5 +378,6 @@ td small { font-size: 11px; }
     .user-access-buttons .button { width: 100%; }
 }
 @media (prefers-reduced-motion:reduce) {
-    html.theme-transition :is(body,.sidebar,.topbar,.panel,.kpi,.button,input,select,th,td,.appearance-controls,.theme-toggle,.login-story,.login-layout), .file-dropzone { transition: none; }
+    html.theme-transition body, html.theme-transition body *, html.theme-transition body *::before, html.theme-transition body *::after, .file-dropzone { transition: none; }
+    ::view-transition-old(root), ::view-transition-new(root) { animation: none; }
 }

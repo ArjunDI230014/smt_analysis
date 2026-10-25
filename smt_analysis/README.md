@@ -2,6 +2,8 @@
 
 The application includes administrator/agent access, a private Google Sheets connection with automatic refresh, Excel imports from **Raw Data CSAT**, and daily, weekly, and monthly CSAT/DSAT dashboards. Both import paths require that exact worksheet name and ignore all other worksheets, even when a Google Sheets URL points to another tab. Agents can see each recorded DSAT reason and customer comment. Connected-sheet refreshes remove exact duplicate entries and preserve the last report on conflicts or failures. Flagged rows are excluded by default.
 
+Administrators choose **Shopee Food** or **Marketplace** on the main page to open its statistics. Manage each module's URL in **Google Sheets**, using the module switcher to select its connection settings. Each module has its own service-account key, reports, and sync status. Existing URLs and reports remain in Shopee Food; Marketplace starts empty. Run `php spark migrate` after updating. User accounts remain shared across both modules.
+
 Master workbooks up to **128 MB** are supported. Identical survey IDs count once; the source’s **Inclulde in CSAT?** flag controls eligibility. Recorded reason codes are decoded to their source labels, including multiple reasons per DSAT. Missing reasons and customer comments remain explicitly unavailable.
 
 See **[SETUP.md](SETUP.md)** for startup, account creation, upload requirements, and tests. Use XAMPP Apache at **http://localhost/smt_analysis/**, or **http://192.168.1.5/smt_analysis/** from another device on your network. See SETUP.md for firewall and startup details.

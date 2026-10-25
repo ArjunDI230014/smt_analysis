@@ -44,6 +44,7 @@
             results.replaceChildren(...content.childNodes);
             results.dataset.responseCount = content.dataset.responseCount;
             results.dataset.agentCount = content.dataset.agentCount;
+            results.dataset.dsatTotal = content.dataset.dsatTotal;
             results.dataset.period = content.dataset.period;
             document.getElementById('report-data')?.remove();
             const data = next.getElementById('report-data');
@@ -52,7 +53,7 @@
             if (url.href !== location.href) history[push ? 'pushState' : 'replaceState'](null, '', url);
             document.dispatchEvent(new CustomEvent('dashboard:updated', {detail: {agentNames}}));
             const count = Number(content.dataset.responseCount).toLocaleString();
-            const dsatCount = Number(results.querySelector('[data-dsat-total]')?.dataset.dsatTotal || 0).toLocaleString();
+            const dsatCount = Number(results.dataset.dsatTotal || 0).toLocaleString();
             announce(input.value.trim()
                 ? `Updated: ${count} responses, ${dsatCount} DSATs across ${Number(content.dataset.agentCount).toLocaleString()} matching agent names.`
                 : `Updated: ${count} responses, ${dsatCount} DSATs. All matching agents are shown.`);

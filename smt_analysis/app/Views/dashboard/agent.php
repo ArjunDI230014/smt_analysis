@@ -1,11 +1,11 @@
 <?= $this->extend('layout') ?>
 <?= $this->section('content') ?>
 <?php $period = $filters['period'] ?? 'daily'; $periodLabel = ['daily' => 'Daily', 'weekly' => 'Weekly', 'monthly' => 'Monthly'][$period] ?? 'Daily'; ?>
-<div class="page-heading"><div><p class="eyebrow">AGENT INFORMATION</p><h1><?= esc($identity['agent_name']) ?></h1><p class="muted"><?= esc($identity['agent_email'] ?: 'No agent email in this report') ?></p></div><a class="button secondary" href="<?= esc(\App\Libraries\Modules::url('dashboard') . '?' . http_build_query(array_merge($filters, ['import' => $identity['import_id']])) . '#agent-performance') ?>">← Agent performance</a></div>
+<div class="page-heading"><div><p class="eyebrow">AGENT INFORMATION</p><h1><?= esc($identity['agent_name']) ?></h1><p class="muted"><?= esc($identity['agent_email'] ?: 'No agent email in this report') ?></p></div><a class="button secondary" href="<?= esc(\App\Libraries\Modules::url('dashboard') . '?' . http_build_query(array_merge($filters, ['import' => $identity['import_id'], 'tab' => 'agents'])) . '#agent-performance') ?>">← Agent performance</a></div>
 <section class="panel"><div class="panel-heading"><div><h2>Account information</h2><p><?= $account ? esc(ucfirst($account['role'])) . ' · ' . ($account['archived'] ? 'Archived' : ($account['active'] ? 'Active' : 'Inactive')) : 'No registered account linked to this report identity.' ?></p></div><?php if ($account): ?><a class="text-link" href="<?= esc(site_url('admin/users') . '?' . http_build_query(['q' => $account['email']])) ?>">Manage account →</a><?php endif ?></div></section>
 <p class="method-note">Performance in the selected report and filters. <?= $identity['agent_email'] ? 'Matched by agent email and name.' : 'This report has no email for this agent; matching rows share this exact name.' ?></p>
 <form class="panel agent-period-form" method="get" action="<?= \App\Libraries\Modules::url('admin/agents/' . $identity['id']) ?>" aria-label="Agent report filters">
-    <?php foreach (['scope', 'team', 'channel'] as $key): ?><input type="hidden" name="<?= $key ?>" value="<?= esc($filters[$key]) ?>"><?php endforeach ?>
+    <?php foreach (['scope', 'team', 'channel', 'tab'] as $key): ?><input type="hidden" name="<?= $key ?>" value="<?= esc($filters[$key]) ?>"><?php endforeach ?>
     <label>From<input type="date" name="from" value="<?= esc($filters['from']) ?>"></label>
     <label>To<input type="date" name="to" value="<?= esc($filters['to']) ?>"></label>
     <label>View<select name="period"><?php foreach (['daily' => 'Daily', 'weekly' => 'Weekly', 'monthly' => 'Monthly'] as $key => $label): ?><option value="<?= $key ?>" <?= $period === $key ? 'selected' : '' ?>><?= $label ?></option><?php endforeach ?></select></label>

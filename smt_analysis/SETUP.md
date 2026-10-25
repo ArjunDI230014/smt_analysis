@@ -154,7 +154,9 @@ Comma-separated codes represent multiple selected reasons. Each category counts 
 
 Use the light/dark toggle in the workspace header (top-right on sign-in pages) to switch appearance. The initial theme follows your device's appearance; manual choices are remembered and synchronized across browser tabs. Dark mode uses charcoal surfaces and the orange accent `#EE4D2D`. Charts follow the theme while Good and Bad ratings keep distinct green and coral colors.
 
-Quick date ranges show the entire report, its last 7 days, or its last 30 days, ending on the report's latest date. Applied filter chips show what contributes to the current results and can be removed individually. Agent search updates scores, charts, and the table as you type; press `/` to focus search or use the clear button to show all agents. Date ranges are checked before applying. On smaller screens, use Menu to open workspace navigation.
+Both Shopee Food and Marketplace dashboards open on **Statistics**, which shows the charts. **DSAT feedback** and **Agent performance** have separate tabs that share the selected report and filters. Detailed tables scroll within a bounded area with sticky column headers; DSAT feedback keeps 50 responses per page, and Agent performance keeps 25 agent/team combinations per page.
+
+Quick date ranges show the entire report, its last 7 days, or its last 30 days, ending on the report's latest date. Applied filter chips show what contributes to the current results and can be removed individually. Agent search updates scores and the selected tab's results as you type; press `/` to focus search or use the clear button to show all agents. Date ranges are checked before applying. On smaller screens, administrators can use **Menu** to open workspace navigation.
 
 The report uploader accepts a single workbook through the file picker or drag and drop. It previews the filename and size, supports clearing the selection, and reports format or file-size problems before submission. Server-side workbook validation still runs on every import.
 

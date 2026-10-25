@@ -33,6 +33,14 @@ class Dashboard extends BaseController
         $googleSheets = (new GoogleSheetsSync(null, null, null, Modules::current()))->status();
         $imports = db_connect()->table('imports')->where('module', Modules::current())->where('archived', 0)->orderBy('id', 'DESC')->get()->getResultArray();
         $input = $this->request->getGet();
+        // Older pagination links did not include a section; keep those links useful.
+        if (!array_key_exists('tab', $input)) {
+            if (filter_var($input['dsat_page'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 2]]) !== false) {
+                $input['tab'] = 'dsat';
+            } elseif (filter_var($input['page'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 2]]) !== false) {
+                $input['tab'] = 'agents';
+            }
+        }
         $personal = session('user')['role'] !== 'admin';
         $report = new CsatReport(null, $personal ? session('user')['email'] : null);
         if ($personal) {

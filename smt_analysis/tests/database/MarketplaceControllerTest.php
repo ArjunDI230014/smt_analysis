@@ -104,7 +104,7 @@ final class MarketplaceControllerTest extends CIUnitTestCase
 
     public function testMarketplaceFormsAndLinksKeepTheCurrentModule(): void
     {
-        $dashboard = $this->withSession(['user_id' => $this->adminId])->get('/marketplace/dashboard');
+        $dashboard = $this->withSession(['user_id' => $this->adminId])->get('/marketplace/dashboard?tab=agents');
         foreach (['/marketplace/dashboard', '/marketplace/admin/uploads', '/marketplace/admin/agents/' . $this->responses['marketplace']] as $url) {
             self::assertStringContainsString($url, $dashboard->getBody());
         }
@@ -121,6 +121,105 @@ final class MarketplaceControllerTest extends CIUnitTestCase
             self::assertStringContainsString($url, $settings->getBody());
         }
         self::assertStringNotContainsString(config('GoogleSheets')->defaultSpreadsheetId, $settings->getBody());
+    }
+
+    public function testReportSectionsRenderSeparatelyAndPreserveFiltersInBothModules(): void
+    {
+        foreach (['shopee-food' => '/dashboard', 'marketplace' => '/marketplace/dashboard'] as $module => $path) {
+            $this->db->table('responses')->where('id', $this->responses[$module])->update([
+                'good' => 0, 'bad' => 1, 'raw_json' => json_encode(['dsat_reason' => 'Recorded ' . $module . ' reason']),
+            ]);
+            $filters = ['import' => $this->reports[$module], 'team' => $module . '-team', 'from' => '2026-10-24',
+                'to' => '2026-10-24', 'period' => 'weekly', 'scope' => 'all'];
+            foreach (['statistics', 'dsat', 'agents'] as $tab) {
+                $result = $this->withSession(['user_id' => $this->adminId])->get($path . '?' . http_build_query($filters + ['tab' => $tab]));
+                $result->assertOK();
+                $body = $result->getBody();
+                self::assertStringContainsString('id="dashboard-filters"', $body);
+                self::assertStringContainsString('data-dsat-total="1"', $body);
+                foreach (['statistics' => 'chart-error', 'dsat' => 'dsat-feedback', 'agents' => 'agent-performance'] as $section => $id) {
+                    self::assertSame($section === $tab, str_contains($body, 'id="' . $id . '"'), $module . ' ' . $tab . ' section ' . $section);
+                }
+                $document = new \DOMDocument();
+                @$document->loadHTML($body);
+                $xpath = new \DOMXPath($document);
+                $tabs = $xpath->query('//*[@id="report-sections"]//a');
+                self::assertCount(3, $tabs);
+                foreach ($tabs as $link) {
+                    self::assertSame(parse_url(site_url(ltrim($path, '/')), PHP_URL_PATH), parse_url($link->getAttribute('href'), PHP_URL_PATH));
+                    parse_str((string) parse_url($link->getAttribute('href'), PHP_URL_QUERY), $query);
+                    foreach ($filters as $key => $value) { self::assertSame((string) $value, $query[$key]); }
+                    self::assertContains($query['tab'], ['statistics', 'dsat', 'agents']);
+                }
+                self::assertSame($tab, $xpath->query('//*[@id="dashboard-filters"]//input[@name="tab"]')->item(0)->getAttribute('value'));
+            }
+            $default = $this->withSession(['user_id' => $this->adminId])->get($path);
+            self::assertStringContainsString('id="chart-error"', $default->getBody());
+            self::assertStringNotContainsString('id="dsat-feedback"', $default->getBody());
+            self::assertStringNotContainsString('id="agent-performance"', $default->getBody());
+        }
+    }
+
+    public function testViewersKeepTheirOwnResponsesAcrossAllReportSections(): void
+    {
+        foreach (['shopee-food' => '/dashboard', 'marketplace' => '/marketplace/dashboard'] as $module => $path) {
+            $this->db->table('responses')->where('id', $this->responses[$module])->update([
+                'good' => 0, 'bad' => 1, 'raw_json' => json_encode(['customer_comment' => 'Owned feedback ' . $module]),
+            ]);
+            $foreign = $this->db->table('responses')->where('id', $this->responses[$module])->get()->getRowArray();
+            unset($foreign['id']);
+            $foreign = array_replace($foreign, ['csat_id' => 'private-survey', 'agent_name' => 'Private Agent ' . $module,
+                'agent_email' => 'other@example.test', 'raw_json' => json_encode(['customer_comment' => 'Private feedback ' . $module])]);
+            $this->db->table('responses')->insert($foreign);
+            foreach (['statistics', 'dsat', 'agents'] as $tab) {
+                $result = $this->withSession(['user_id' => $this->viewerId])->get($path . '?tab=' . $tab);
+                $result->assertOK();
+                self::assertStringContainsString('data-response-count="1"', $result->getBody());
+                self::assertStringNotContainsString('Private Agent', $result->getBody());
+                self::assertStringNotContainsString('Private feedback', $result->getBody());
+                self::assertStringNotContainsString('name="agent"', $result->getBody());
+                if ($tab === 'dsat') { self::assertStringContainsString('Owned feedback ' . $module, $result->getBody()); }
+                if ($tab === 'agents') { self::assertStringContainsString($module . '-agent', $result->getBody()); }
+            }
+        }
+    }
+
+    public function testReportPaginationKeepsItsSectionModuleAndFilters(): void
+    {
+        foreach (['shopee-food' => '/dashboard', 'marketplace' => '/marketplace/dashboard'] as $module => $path) {
+            $template = $this->db->table('responses')->where('id', $this->responses[$module])->get()->getRowArray();
+            unset($template['id']);
+            for ($i = 1; $i <= 51; $i++) {
+                $this->db->table('responses')->insert(array_replace($template, [
+                    'source_row' => $i + 2, 'agent_name' => sprintf('Pagination Agent %03d', $i), 'csat_id' => 'paging-' . $i,
+                    'good' => 0, 'bad' => 1, 'raw_json' => json_encode(['customer_comment' => 'Paging feedback ' . $i]),
+                ]));
+            }
+            $filters = ['import' => $this->reports[$module], 'agent' => 'Pagination', 'period' => 'monthly',
+                'team' => $module . '-team', 'scope' => 'included'];
+            foreach (['dsat' => 'DSAT feedback pages', 'agents' => 'Agent performance pages'] as $tab => $label) {
+                $result = $this->withSession(['user_id' => $this->adminId])->get($path . '?' . http_build_query($filters + ['tab' => $tab]));
+                $result->assertOK();
+                $document = new \DOMDocument();
+                @$document->loadHTML($result->getBody());
+                $xpath = new \DOMXPath($document);
+                $next = $xpath->query('//nav[@aria-label="' . $label . '"]//a[@rel="next"]');
+                self::assertCount(1, $next);
+                $href = $next->item(0)->getAttribute('href');
+                self::assertSame(parse_url(site_url(ltrim($path, '/')), PHP_URL_PATH), parse_url($href, PHP_URL_PATH));
+                parse_str((string) parse_url($href, PHP_URL_QUERY), $query);
+                foreach ($filters as $key => $value) { self::assertSame((string) $value, $query[$key]); }
+                self::assertSame($tab, $query['tab']);
+                self::assertSame('2', $query[$tab === 'dsat' ? 'dsat_page' : 'page']);
+                $nextPage = $this->withSession(['user_id' => $this->adminId])->get($path . '?' . http_build_query($query));
+                $nextPage->assertOK();
+                self::assertStringContainsString('id="' . ($tab === 'dsat' ? 'dsat-feedback' : 'agent-performance') . '"', $nextPage->getBody());
+                unset($query['tab']);
+                $legacy = $this->withSession(['user_id' => $this->adminId])->get($path . '?' . http_build_query($query));
+                $legacy->assertOK();
+                self::assertStringContainsString('id="' . ($tab === 'dsat' ? 'dsat-feedback' : 'agent-performance') . '"', $legacy->getBody());
+            }
+        }
     }
 
     public function testOtherModuleReportAndAgentIdsCannotBeOpened(): void

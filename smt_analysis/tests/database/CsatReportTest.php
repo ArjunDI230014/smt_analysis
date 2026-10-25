@@ -49,6 +49,34 @@ final class CsatReportTest extends CIUnitTestCase
         self::assertSame(3, $report['agentCount']);
     }
 
+    public function testDashboardTabDefaultsAndDoesNotChangeReportData(): void
+    {
+        $service = new CsatReport($this->db);
+        foreach ([[], ['tab' => ''], ['tab' => '   ']] as $input) {
+            self::assertSame('statistics', $service->filters($input)['tab']);
+        }
+        $input = ['scope' => 'all', 'team' => 'A', 'period' => 'weekly'];
+        $expected = $service->build($this->importId, $service->filters($input));
+        foreach (['statistics', 'dsat', 'agents'] as $tab) {
+            $filters = $service->filters($input + ['tab' => $tab]);
+            self::assertSame($tab, $filters['tab']);
+            self::assertSame($expected, $service->build($this->importId, $filters));
+        }
+    }
+
+    public function testInvalidDashboardTabsAreRejected(): void
+    {
+        $service = new CsatReport($this->db);
+        foreach (['unknown', 'Statistics', '0', 0, true, ['agents'], new \stdClass()] as $tab) {
+            try {
+                $service->filters(['tab' => $tab]);
+                self::fail('An invalid report tab must be rejected.');
+            } catch (\DomainException $e) {
+                self::assertNotSame('', $e->getMessage());
+            }
+        }
+    }
+
     public function testExclusionAndDateFilters(): void
     {
         $service = new CsatReport($this->db);
@@ -139,7 +167,7 @@ final class CsatReportTest extends CIUnitTestCase
     public function testViewerCanViewDashboard(): void
     {
         $this->db->table('responses')->where('csat_id', '1')->update(['agent_email' => 'viewer@example.test']);
-        $result = $this->withSession(['user_id' => $this->viewerId])->get('/dashboard');
+        $result = $this->withSession(['user_id' => $this->viewerId])->get('/dashboard?tab=agents');
         $result->assertOK();
         $result->assertSee('100.00');
         $result->assertSee('Agent 1');
@@ -166,11 +194,14 @@ final class CsatReportTest extends CIUnitTestCase
 
     public function testUnlinkedViewerReceivesNoOtherPeoplesData(): void
     {
-        $result = $this->withSession(['user_id' => $this->viewerId])->get('/dashboard?scope=all');
-        $result->assertOK();
-        $result->assertSee('No responses match');
-        $result->assertDontSee('Agent 1');
-        $result->assertDontSee('Agent 3');
+        foreach (['statistics', 'dsat', 'agents'] as $tab) {
+            $result = $this->withSession(['user_id' => $this->viewerId])->get('/dashboard?scope=all&tab=' . $tab);
+            $result->assertOK();
+            self::assertStringContainsString('data-response-count="0"', $result->getBody());
+            $result->assertSee($tab === 'dsat' ? 'No DSAT responses' : 'No responses match');
+            $result->assertDontSee('Agent 1');
+            $result->assertDontSee('Agent 3');
+        }
     }
 
     public function testDisabledUserCannotAccessDashboard(): void

@@ -17,7 +17,7 @@ class CsatReport
     public function filters(array $input): array
     {
         $filters = [];
-        foreach (['from', 'to', 'team', 'channel', 'agent', 'scope', 'period'] as $key) {
+        foreach (['from', 'to', 'team', 'channel', 'agent', 'scope', 'period', 'tab'] as $key) {
             if (isset($input[$key]) && !is_scalar($input[$key])) {
                 throw new DomainException('Invalid dashboard filter.');
             }
@@ -33,6 +33,10 @@ class CsatReport
         $filters['period'] = $filters['period'] ?: 'daily';
         if (!in_array($filters['period'], ['daily', 'weekly', 'monthly'], true)) {
             throw new DomainException('Choose a daily, weekly, or monthly view.');
+        }
+        $filters['tab'] = $filters['tab'] === '' ? 'statistics' : $filters['tab'];
+        if (!in_array($filters['tab'], ['statistics', 'dsat', 'agents'], true)) {
+            throw new DomainException('Choose Statistics, DSAT feedback, or Agent performance.');
         }
         $dsatPage = $input['dsat_page'] ?? 1;
         if ($dsatPage === '') {

@@ -2,15 +2,23 @@
 
 A CodeIgniter 4 application for connecting a private Google Sheet or importing the Excel worksheet named exactly **Raw Data CSAT**, with CSAT and DSAT reporting. Both paths ignore every other worksheet and stop if Raw Data CSAT is missing.
 
+## Shopee Food and Marketplace
+
+Run `php -d extension=sqlite3 spark migrate` after updating. The module migration assigns all existing reports to **Shopee Food** and preserves its saved connection. **Marketplace** starts with no URL or reports.
+
+Administrators choose **Shopee Food** or **Marketplace** on the main page to open that module's statistics. Use **Modules** in the sidebar to return to this choice. URL configuration is in **Google Sheets**: use its module switcher to select Shopee Food or Marketplace, edit that module's URL and connection settings, then choose **Save connection**. Each module has its own dashboard, uploads, reports, column mappings, refresh interval, credentials, and sync status. Both use the same Raw Data CSAT import contract, and the same workbook can be imported once into each module.
+
+Existing `/dashboard`, `/admin/sheets`, and `/admin/uploads` links continue to open Shopee Food. Marketplace uses `/marketplace/dashboard`, `/marketplace/admin/sheets`, and `/marketplace/admin/uploads`. These paths are relative to the app's base URL. Users can open either module's dashboard through its direct link and continue to see only their own responses. Login accounts, user administration, and registration eligibility are shared across the application.
+
 ## Connect Google Sheets once
 
 1. Run `php -d extension=sqlite3 spark migrate` after updating the app.
 2. In Google Cloud Console, create a project, enable **Google Sheets API**, then create a **service account** and its **JSON key**. This is the web app's identity; the spreadsheet may belong to a different email from your GPT or app account.
-3. Sign in to the app as an administrator and open **Google Sheets**. Paste the file URL, choose the refresh interval (15 minutes by default), attach the JSON key, and choose **Save connection**. The supplied source URL is prefilled. Server administrators can instead set `GOOGLE_SHEETS_CREDENTIALS` to an absolute path outside `public`; this disables replacement through the web form.
+3. Sign in to the app as an administrator and open **Google Sheets**. Choose **Shopee Food** or **Marketplace** in the module switcher. Paste that module's file URL, choose the refresh interval (15 minutes by default), attach its JSON key, and choose **Save connection**. The existing source URL is prefilled only for Shopee Food. Server administrators can instead set `GOOGLE_SHEETS_CREDENTIALS` for Shopee Food or `MARKETPLACE_GOOGLE_SHEETS_CREDENTIALS` for Marketplace to an absolute path outside `public`; this disables replacement through that module's web form.
 4. Open the spreadsheet with its owner account. Share it with the displayed service-account email as **Viewer**. The app uses the read-only Sheets API scope.
 5. Choose **Refresh now**. The app selects the worksheet named exactly **Raw Data CSAT** by its name. The pasted URL may point to any tab; its `gid` does not change this selection. There is no fallback to Daily CSAT or another worksheet. The app does not write to the source spreadsheet.
 
-The service-account key is stored in `writable/private/google-service-account.json`, outside the public directory and ignored by Git. Only administrators can save connection settings, replace the key, or force a refresh. ChatGPT's Google Drive connection is not required for web app syncing.
+Each module's service-account key is stored separately under `writable/private`, outside the public directory and ignored by Git. Shopee Food retains `google-service-account.json`. Only administrators can save connection settings, replace a key, or force a refresh. Configure and share the spreadsheet for each module independently. ChatGPT's Google Drive connection is not required for web app syncing.
 
 To switch files later, edit **Google Sheet URL** and save. The replacement file must also contain **Raw Data CSAT**. Share a new private file with the same service-account email. The last successful report stays available until the replacement source passes validation and syncs. The optional exact **Reason column**, **Customer comment column**, and **Case or ticket ID column** mappings select fields within Raw Data CSAT. Recorded DSAT reasons and customer comments stay separate; the app does not invent a cause from a comment or issue category.
 
@@ -22,7 +30,7 @@ The dashboard checks for due updates when opened and every minute while visible.
 .\deploy\install-sheet-sync-task.ps1
 ```
 
-This runs `spark csat:sync` once a minute with `php-win.exe`, the windowless PHP CLI beside `php.exe`; the command decides whether a refresh is due. No PowerShell or console window opens for scheduled checks. The task runs with the current user's normal privileges while that user is signed in. Keep the computer awake and connected. Run the installer again after updating an older PowerShell-based task or moving the app or PHP installation. Use `deploy/sync-sheets.ps1` for a manual run with visible output. To remove the task, run `Unregister-ScheduledTask -TaskName 'Summit Analytics Google Sheets Sync' -Confirm:$false`.
+This runs `spark csat:sync` once a minute with `php-win.exe`, the windowless PHP CLI beside `php.exe`; the command checks both modules independently and refreshes each configured connection when due. A failure in one module does not prevent checking the other. No PowerShell or console window opens for scheduled checks. The task runs with the current user's normal privileges while that user is signed in. Keep the computer awake and connected. Run the installer again after updating an older PowerShell-based task or moving the app or PHP installation. Use `deploy/sync-sheets.ps1` for a manual run with visible output. To remove the task, run `Unregister-ScheduledTask -TaskName 'Summit Analytics Google Sheets Sync' -Confirm:$false`.
 
 On another server, schedule `php -d memory_limit=768M spark csat:sync` every minute with the app directory as working directory. Use `php -d memory_limit=768M spark csat:sync --force` for a manual command-line refresh. Pausing the connection prevents both scheduled and forced syncs. A file lock prevents concurrent refreshes; failed requests retry after at least a minute and preserve the last successful report.
 
@@ -55,7 +63,7 @@ From the outer project folder, run:
 
 The script creates the SQLite database, runs migrations, and prompts you to create the first account. Choose **admin**. Use your own email and a password of at least 12 characters. The CLI password prompt is visible, so run it in a private terminal.
 
-Then open **http://localhost:8080**, sign in, and choose **Upload reports**. Select your master Excel workbook. Only `Raw Data CSAT` is imported; every other worksheet is ignored. Stop the local server with Ctrl+C.
+Then open **http://localhost:8080**, sign in, choose a module, and choose **Upload reports**. Select your master Excel workbook. Only `Raw Data CSAT` is imported; every other worksheet is ignored. Stop the local server with Ctrl+C.
 
 The script enables the existing SQLite PHP extension for this process only and configures 128 MB uploads, 130 MB requests, 768 MB memory, and a 300-second execution limit. It does not edit the system's PHP configuration. The upload page shows the effective limit of the running server.
 
@@ -89,11 +97,12 @@ Alternatively, create an empty MySQL database, configure `.env`, and let `php sp
 | Table | Purpose |
 | --- | --- |
 | `users` | Login identity, hashed password, admin/user role, active status |
-| `imports` | One uploaded report snapshot: filename, file hash, uploader, dates, row count |
+| `imports` | One module's report snapshot: module, filename, file hash, uploader, dates, row count |
+| `sheet_sources` | Separate Shopee Food and Marketplace connection settings and sync status |
 | `responses` | Validated source responses, normalized Good/Bad flags, date, team, agent, channel, raw worksheet values |
 | `migrations` | Created and maintained by CodeIgniter to track schema versions |
 
-Relationships: one user uploads many imports; one import owns many responses. CSAT IDs are unique per import, and file hashes prevent duplicate uploads. The binary UTF-8 collation preserves case distinctions in the source's team names. SQL and migrations use InnoDB-compatible foreign keys; do not combine this schema with unrelated existing tables of the same names.
+Relationships: one user uploads many imports; one import owns many responses. CSAT IDs are unique per import, and file hashes prevent duplicate uploads within each module. The binary UTF-8 collation preserves case distinctions in the source's team names. SQL and migrations use InnoDB-compatible foreign keys; do not combine this schema with unrelated existing tables of the same names.
 
 ## Import contract
 
@@ -109,7 +118,7 @@ Relationships: one user uploads many imports; one import owns many responses. CS
 - Identical records with the same CSAT ID count once, and the upload confirmation reports the number skipped. Conflicting records with the same ID reject the import without a partial snapshot.
 - Missing DSAT reasons display **Reason not provided**. Customer comments stay separate from recorded reasons.
 - Formulas use their saved Excel result. The importer never evaluates cross-sheet formulas. Recalculate and save the workbook in Excel first if a required formula has no cached value.
-- Each successful upload creates an independent report snapshot. Identical files are rejected. Overlapping reports can coexist, but the dashboard selects **one snapshot at a time** and never adds them together.
+- Each successful upload creates an independent report snapshot in the selected module. Identical files are rejected within that module. Overlapping reports can coexist, but the dashboard selects **one snapshot at a time** and never adds them together.
 - Failed imports leave no partial report. The original workbook is not retained; only data from `Raw Data CSAT` and import metadata are saved outside the public directory. Existing historical snapshots retain their original source data and are not relabelled as Raw Data CSAT imports.
 
 | Master source field | Meaning |

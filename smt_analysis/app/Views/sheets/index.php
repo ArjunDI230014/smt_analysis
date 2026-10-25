@@ -3,18 +3,24 @@
 <?php
 $source = $googleSheets['source'] ?? [];
 $config = config('GoogleSheets');
-$spreadsheetId = $source['spreadsheet_id'] ?? $config->defaultSpreadsheetId;
-$sourceUrl = 'https://docs.google.com/spreadsheets/d/' . rawurlencode($spreadsheetId) . '/edit';
-$managedKey = trim((string) env('GOOGLE_SHEETS_CREDENTIALS', '')) !== '';
+$module = \App\Libraries\Modules::current();
+$spreadsheetId = $source['spreadsheet_id'] ?? ($module === \App\Libraries\Modules::SHOPEE_FOOD ? $config->defaultSpreadsheetId : '');
+$sourceUrl = $spreadsheetId !== '' ? 'https://docs.google.com/spreadsheets/d/' . rawurlencode($spreadsheetId) . '/edit#gid=' . (int) ($source['sheet_gid'] ?? 0) : '';
+$managedKey = trim((string) env($config->credentialsEnvironment($module), '')) !== '';
 ?>
-<div class="page-heading"><div><p class="eyebrow">CONNECTED DATA</p><h1>Google Sheets</h1><p class="muted">Connect once. Keep your sheet updated and the dashboard follows.</p></div><a class="button secondary" href="<?= site_url('dashboard') ?>">View dashboard</a></div>
+<div class="page-heading"><div><p class="eyebrow">CONNECTED DATA</p><h1>Google Sheets</h1><p class="muted">Connect once. Keep your sheet updated and the dashboard follows.</p></div><a class="button secondary" href="<?= \App\Libraries\Modules::url('dashboard') ?>">View dashboard</a></div>
+<nav class="sheets-module-navigation" aria-label="Google Sheets modules">
+<?php foreach (\App\Libraries\Modules::all() as $key => $label): ?>
+    <a class="<?= $module === $key ? 'active' : '' ?>" <?= $module === $key ? 'aria-current="page"' : '' ?> href="<?= \App\Libraries\Modules::url('admin/sheets', $key) ?>"><?= esc($label) ?></a>
+<?php endforeach ?>
+</nav>
 <?php if ($googleSheets['migration_required']): ?><div class="notice error" role="alert">The server needs its latest database migration before this connection can be saved.</div><?php endif ?>
 <?= view('sheets/status', ['googleSheets' => $googleSheets, 'personal' => false, 'settingsPage' => true]) ?>
 <div class="sheets-settings-grid">
 <section class="panel sheets-settings"><div class="panel-heading"><div><h2>Connection settings</h2><p>Change the file URL here whenever you move to another spreadsheet.</p></div></div>
-<form action="<?= site_url('admin/sheets') ?>" method="post" enctype="multipart/form-data">
+<form action="<?= \App\Libraries\Modules::url('admin/sheets') ?>" method="post" enctype="multipart/form-data">
 <?= csrf_field() ?>
-<label>Google Sheet URL<input type="url" name="spreadsheet_url" value="<?= esc($sourceUrl) ?>" maxlength="2048" required placeholder="https://docs.google.com/spreadsheets/d/…/edit" aria-describedby="sheet-url-help"></label>
+<label><?= esc(\App\Libraries\Modules::label()) ?> Google Sheet URL<input type="url" name="spreadsheet_url" value="<?= esc($sourceUrl) ?>" maxlength="2048" required placeholder="https://docs.google.com/spreadsheets/d/…/edit" aria-describedby="sheet-url-help"></label>
 <p class="small muted" id="sheet-url-help">Paste the file URL from any tab. The app always imports the worksheet named exactly <strong>Raw Data CSAT</strong> and ignores every other tab. If that worksheet is missing, the refresh stops and keeps the last successful report.</p>
 <div class="sheets-form-row"><label>Check for updates every (minutes)<input type="number" name="refresh_minutes" min="1" max="1440" required value="<?= (int) ($source['refresh_minutes'] ?? 15) ?>"></label><label>Connection<select name="enabled"><option value="1" <?= !isset($source['enabled']) || $source['enabled'] ? 'selected' : '' ?>>Enabled</option><option value="0" <?= isset($source['enabled']) && !$source['enabled'] ? 'selected' : '' ?>>Paused</option></select></label></div>
 <fieldset class="sheets-mappings"><legend>DSAT details</legend><p class="small muted">Enter exact column headings from Raw Data CSAT, or leave blank to use recognised fields. The master source records reasons in <strong>csat_reason</strong>. Map a customer comment only when your source includes a separate comment field. Issue categories are not treated as DSAT reasons automatically.</p>

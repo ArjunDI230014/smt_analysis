@@ -4,6 +4,7 @@ namespace App\Controllers;
 
 use App\Libraries\CsatReport;
 use App\Libraries\GoogleSheetsSync;
+use App\Libraries\Modules;
 use DomainException;
 
 class Dashboard extends BaseController
@@ -11,7 +12,7 @@ class Dashboard extends BaseController
     public function agent(int $id)
     {
         $db = db_connect();
-        $identity = $db->table('responses')->select('responses.*')->join('imports', 'imports.id = responses.import_id')->where('responses.id', $id)->where('imports.archived', 0)->get()->getRowArray();
+        $identity = $db->table('responses')->select('responses.*')->join('imports', 'imports.id = responses.import_id')->where('responses.id', $id)->where('imports.archived', 0)->where('imports.module', Modules::current())->get()->getRowArray();
         if (!$identity) {
             throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound('Agent not found.');
         }
@@ -19,7 +20,7 @@ class Dashboard extends BaseController
         try {
             $filters = $report->filters($this->request->getGet());
         } catch (DomainException $e) {
-            return redirect()->to(site_url('admin/agents/' . $id))->with('error', $e->getMessage());
+            return redirect()->to(Modules::url('admin/agents/' . $id))->with('error', $e->getMessage());
         }
         $filters['agent'] = '';
         $data = $report->build((int) $identity['import_id'], $filters);
@@ -29,8 +30,8 @@ class Dashboard extends BaseController
 
     public function index()
     {
-        $googleSheets = (new GoogleSheetsSync())->status();
-        $imports = db_connect()->table('imports')->where('archived', 0)->orderBy('id', 'DESC')->get()->getResultArray();
+        $googleSheets = (new GoogleSheetsSync(null, null, null, Modules::current()))->status();
+        $imports = db_connect()->table('imports')->where('module', Modules::current())->where('archived', 0)->orderBy('id', 'DESC')->get()->getResultArray();
         $input = $this->request->getGet();
         $personal = session('user')['role'] !== 'admin';
         $report = new CsatReport(null, $personal ? session('user')['email'] : null);
@@ -40,7 +41,7 @@ class Dashboard extends BaseController
         try {
             $filters = $report->filters($input);
         } catch (DomainException $e) {
-            return redirect()->to(site_url('dashboard'))->with('error', $e->getMessage());
+            return redirect()->to(Modules::url('dashboard'))->with('error', $e->getMessage());
         }
         $connectedId = $googleSheets['source']['import_id'] ?? null;
         $availableIds = array_column($imports, 'id');

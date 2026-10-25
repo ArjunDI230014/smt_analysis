@@ -69,7 +69,7 @@ class GoogleSheetsClient
         $path = $this->credentialsPath;
         if (!is_string($path) || !preg_match('~^(?:[A-Za-z]:[\\\\/]|/|\\\\\\\\)~', $path)
             || !is_file($path) || !is_readable($path)) {
-            throw new DomainException('Add a service-account JSON key in Google Sheets settings, or set GOOGLE_SHEETS_CREDENTIALS to its absolute server path.');
+            throw new DomainException('Add a service-account JSON key in this module’s Google Sheets settings, or configure its credentials path on the server.');
         }
         if (filesize($path) > 65536) {
             throw new DomainException('Use a Google service-account JSON key smaller than 64 KB.');

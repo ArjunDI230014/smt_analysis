@@ -4,7 +4,7 @@
 <div class="page-heading"><div><p class="eyebrow">REPORT LIBRARY</p><h1>From spreadsheet to insight.</h1><p class="muted">Upload the master workbook to create a new dashboard snapshot.</p></div><span class="sheet-badge">Admin workspace</span></div>
 <?php if ($uploadLimit['limited']): ?><div class="notice error">This server currently allows files up to <strong><?= esc($uploadLimit['label']) ?></strong>. The app supports <?= esc($workbookLimit) ?> workbooks. Ask your administrator to update this server’s PHP upload settings; for the development server, restart it using <code>.\start.ps1</code>.</div><?php endif ?>
 <section class="upload-grid">
-    <form class="panel upload-panel" method="post" action="<?= site_url('admin/uploads') ?>" enctype="multipart/form-data" id="upload-form" data-max-bytes="<?= $uploadLimit['bytes'] ?>" data-max-label="<?= esc($uploadLimit['label']) ?>" data-sheet-name="Raw Data CSAT">
+    <form class="panel upload-panel" method="post" action="<?= \App\Libraries\Modules::url('admin/uploads') ?>" enctype="multipart/form-data" id="upload-form" data-max-bytes="<?= $uploadLimit['bytes'] ?>" data-max-label="<?= esc($uploadLimit['label']) ?>" data-sheet-name="Raw Data CSAT">
         <?= csrf_field() ?>
         <div class="upload-art" aria-hidden="true">↥</div>
         <h2>Upload your Excel workbook</h2>
@@ -38,11 +38,11 @@
         <td><?= esc($item['uploader']) ?></td><td><?= esc($item['created_at']) ?></td>
         <td><span class="tag"><?= $item['archived'] ? 'Archived' : 'Active' ?></span></td>
         <td><div class="import-actions">
-            <?php if (!$item['archived']): ?><a class="button secondary small-button" href="<?= site_url('dashboard') . '?import=' . (int) $item['id'] ?>">View</a><?php endif ?>
-            <form method="post" action="<?= site_url('admin/uploads/' . (int) $item['id'] . ($item['archived'] ? '/restore' : '/archive')) ?>">
+            <?php if (!$item['archived']): ?><a class="button secondary small-button" href="<?= \App\Libraries\Modules::url('dashboard') . '?import=' . (int) $item['id'] ?>">View</a><?php endif ?>
+            <form method="post" action="<?= \App\Libraries\Modules::url('admin/uploads/' . (int) $item['id'] . ($item['archived'] ? '/restore' : '/archive')) ?>">
                 <?= csrf_field() ?><button class="button secondary small-button" type="submit" aria-label="<?= esc(($item['archived'] ? 'Restore ' : 'Archive ') . $item['filename']) ?>"><?= $item['archived'] ? 'Restore' : 'Archive' ?></button>
             </form>
-            <form method="post" action="<?= site_url('admin/uploads/' . (int) $item['id'] . '/delete') ?>" class="delete-import-form" data-filename="<?= esc($item['filename']) ?>">
+            <form method="post" action="<?= \App\Libraries\Modules::url('admin/uploads/' . (int) $item['id'] . '/delete') ?>" class="delete-import-form" data-filename="<?= esc($item['filename']) ?>">
                 <?= csrf_field() ?><button class="button secondary small-button danger-button" type="submit" aria-label="<?= esc('Delete ' . $item['filename']) ?>">Delete</button>
             </form>
         </div></td>

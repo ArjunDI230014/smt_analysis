@@ -6,22 +6,25 @@ use CodeIgniter\Database\BaseConnection;
 use DomainException;
 use Throwable;
 
-/** A single managed report, replaced atomically after a complete successful read and validation. */
+/** One managed report per module, replaced atomically after a complete successful read and validation. */
 class GoogleSheetsSync
 {
     private BaseConnection $db;
     private GoogleSheetsClient $client;
     private string $lockPath;
+    private int $sourceId;
 
-    public function __construct(?BaseConnection $db = null, ?GoogleSheetsClient $client = null, ?string $lockPath = null)
+    public function __construct(?BaseConnection $db = null, ?GoogleSheetsClient $client = null, ?string $lockPath = null, private string $module = 'shopee-food')
     {
+        $this->module = Modules::validate($module);
+        $this->sourceId = $module === 'marketplace' ? 2 : 1;
         $this->db = $db ?? db_connect();
-        $this->client = $client ?? new GoogleSheetsClient();
+        $this->client = $client ?? new GoogleSheetsClient(config('GoogleSheets')->credentialsPath($module));
         // Different databases must not block each other's connection settings or refreshes.
         $databaseIdentity = $this->db->DBDriver . '|' . $this->db->hostname . '|' . $this->db->port . '|'
             . $this->db->database . '|' . $this->db->DBPrefix;
         if ($this->db->database === ':memory:') { $databaseIdentity .= '|' . getmypid(); }
-        $this->lockPath = $lockPath ?? WRITEPATH . 'private/google-sheets-sync-' . substr(hash('sha256', $databaseIdentity), 0, 20) . '.lock';
+        $this->lockPath = $lockPath ?? WRITEPATH . 'private/google-sheets-sync-' . substr(hash('sha256', $databaseIdentity . '|' . $module), 0, 20) . '.lock';
     }
 
     public function status(): array
@@ -36,13 +39,13 @@ class GoogleSheetsSync
             $source['mappings'] = array_intersect_key($source, array_flip(['reason_column', 'comment_column', 'case_column']));
             unset($source['content_hash']);
         }
-        return array_merge(['configured' => $source !== null, 'enabled' => (bool) ($source['enabled'] ?? false),
-            'source' => $source, 'migration_required' => !$this->db->tableExists('sheet_sources')], $this->client->credentialsStatus());
+        return array_merge(['module' => $this->module, 'configured' => $source !== null, 'enabled' => (bool) ($source['enabled'] ?? false),
+            'source' => $source, 'migration_required' => !$this->db->tableExists('sheet_sources') || !$this->db->fieldExists('module', 'imports')], $this->client->credentialsStatus());
     }
 
     public function configure(array $input, int $adminId): array
     {
-        if (!$this->db->tableExists('sheet_sources')) {
+        if (!$this->db->tableExists('sheet_sources') || !$this->db->fieldExists('module', 'imports')) {
             throw new DomainException('Run php spark migrate before configuring Google Sheets.');
         }
         if (!$this->db->table('users')->where('id', $adminId)->where('role', 'admin')->where('active', 1)->where('archived', 0)->countAllResults()) {
@@ -70,11 +73,11 @@ class GoogleSheetsSync
             parse_str($parts['fragment'] ?? '', $fragment);
             $urlGid = $fragment['gid'] ?? $query['gid'] ?? null;
         }
-        $id = $id ?: $config->defaultSpreadsheetId;
+        $id = $id ?: ($this->module === 'shopee-food' ? $config->defaultSpreadsheetId : '');
         if (!preg_match('/^[A-Za-z0-9_-]{20,160}$/D', $id)) {
             throw new DomainException('Enter a valid Google spreadsheet ID or paste its Google Sheets link.');
         }
-        $gidValue = $input['sheet_gid'] ?? $urlGid ?? $config->defaultSheetGid;
+        $gidValue = $input['sheet_gid'] ?? $urlGid ?? ($this->module === 'shopee-food' ? $config->defaultSheetGid : 0);
         $gid = filter_var($gidValue, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0, 'max_range' => 2147483647]]);
         $minutes = filter_var($input['refresh_minutes'] ?? $config->defaultRefreshMinutes, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 1440]]);
         if ($gid === false || $minutes === false) {
@@ -108,11 +111,11 @@ class GoogleSheetsSync
                 $data['last_error'] = null;
             }
             if ($current) {
-                if (!$this->db->table('sheet_sources')->where('id', 1)->update($data)) {
+                if (!$this->db->table('sheet_sources')->where('id', $this->sourceId)->update($data)) {
                     throw new DomainException('The Google Sheets settings could not be saved. Retry shortly.');
                 }
             } else {
-                if (!$this->db->table('sheet_sources')->insert(array_merge(['id' => 1], $data))) {
+                if (!$this->db->table('sheet_sources')->insert(array_merge(['id' => $this->sourceId], $data))) {
                     throw new DomainException('The Google Sheets settings could not be saved. Retry shortly.');
                 }
             }
@@ -139,7 +142,7 @@ class GoogleSheetsSync
                 return $this->result('not_due', $source);
             }
             $now = gmdate('Y-m-d H:i:s');
-            $this->db->table('sheet_sources')->where('id', 1)->update(['last_attempt_at' => $now]);
+            $this->db->table('sheet_sources')->where('id', $this->sourceId)->update(['last_attempt_at' => $now]);
             try {
                 $fetched = $this->client->fetch($source['spreadsheet_id'], (int) $source['sheet_gid']);
                 $normalizer = new GoogleSheetsRows();
@@ -148,13 +151,16 @@ class GoogleSheetsSync
                     : $normalizer->normalize($fetched['values'], $source);
                 $rows = $normalized['rows'];
                 $hash = hash('sha256', json_encode($rows, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE));
-                $import = $source['import_id'] ? $this->db->table('imports')->where('id', $source['import_id'])->get()->getRowArray() : null;
+                $import = $source['import_id'] ? $this->db->table('imports')->where('id', $source['import_id'])->where('module', $this->module)->get()->getRowArray() : null;
+                if ($source['import_id'] && !$import && $this->db->table('imports')->where('id', $source['import_id'])->countAllResults()) {
+                    throw new DomainException('This connection references a report in another module. Ask the server administrator to repair the connection.');
+                }
                 $status = ['sheet_title' => mb_substr($fetched['title'], 0, 255), 'last_synced_at' => $now,
                     'last_error' => null, 'row_count' => count($rows), 'duplicate_count' => $normalized['duplicate_count'],
                     'content_hash' => $hash, 'updated_at' => $now];
                 if ($import && hash_equals((string) ($source['content_hash'] ?? ''), $hash)) {
                     $this->db->table('imports')->where('id', $import['id'])->update(['archived' => 0]);
-                    $this->db->table('sheet_sources')->where('id', 1)->update($status);
+                    $this->db->table('sheet_sources')->where('id', $this->sourceId)->update($status);
                     return $this->result('unchanged', array_merge($source, $status));
                 }
                 $uploader = $this->db->table('users')->where('id', $source['configured_by'])->get()->getRowArray();
@@ -163,7 +169,7 @@ class GoogleSheetsSync
                 }
                 $dates = array_column($rows, 'response_date');
                 $metadata = ['filename' => mb_substr('Google Sheets · ' . $fetched['title'], 0, 255),
-                    'file_hash' => hash('sha256', 'google-sheets-managed-source:1'), 'uploaded_by' => (int) $source['configured_by'],
+                    'file_hash' => hash('sha256', 'google-sheets-managed-source:' . $this->sourceId), 'module' => $this->module, 'uploaded_by' => (int) $source['configured_by'],
                     'row_count' => count($rows), 'date_from' => min($dates), 'date_to' => max($dates), 'created_at' => $now, 'archived' => 0];
                 $this->db->transException(true)->transBegin();
                 try {
@@ -186,7 +192,7 @@ class GoogleSheetsSync
                         }
                     }
                     $status['import_id'] = $importId;
-                    $this->db->table('sheet_sources')->where('id', 1)->update($status);
+                    $this->db->table('sheet_sources')->where('id', $this->sourceId)->update($status);
                     if (!$this->db->transStatus() || !$this->db->transCommit()) {
                         throw new \RuntimeException('Sync transaction failed.');
                     }
@@ -199,7 +205,7 @@ class GoogleSheetsSync
             } catch (Throwable $e) {
                 $message = $e instanceof DomainException ? $e->getMessage()
                     : 'The Google Sheets refresh could not be saved. The last successful report was kept. Retry shortly or ask your administrator to check the server.';
-                $this->db->table('sheet_sources')->where('id', 1)->update(['last_error' => mb_substr($message, 0, 1000)]);
+                $this->db->table('sheet_sources')->where('id', $this->sourceId)->update(['last_error' => mb_substr($message, 0, 1000)]);
                 throw new DomainException($message);
             }
         } finally {
@@ -211,7 +217,7 @@ class GoogleSheetsSync
     private function source(): ?array
     {
         return $this->db->tableExists('sheet_sources')
-            ? $this->db->table('sheet_sources')->where('id', 1)->get()->getRowArray() : null;
+            ? $this->db->table('sheet_sources')->where('id', $this->sourceId)->get()->getRowArray() : null;
     }
 
     private function result(string $state, array $source): array

@@ -4,6 +4,7 @@ namespace App\Controllers;
 
 use App\Libraries\GoogleSheetsClient;
 use App\Libraries\GoogleSheetsSync;
+use App\Libraries\Modules;
 use DomainException;
 use Throwable;
 
@@ -11,7 +12,7 @@ class Sheets extends BaseController
 {
     public function index()
     {
-        return view('sheets/index', ['title' => 'Google Sheets', 'googleSheets' => (new GoogleSheetsSync())->status()]);
+        return view('sheets/index', ['title' => 'Google Sheets', 'googleSheets' => (new GoogleSheetsSync(null, null, null, Modules::current()))->status()]);
     }
 
     public function save()
@@ -20,7 +21,7 @@ class Sheets extends BaseController
         try {
             $file = $this->request->getFile('credentials');
             if ($file && $file->getError() !== UPLOAD_ERR_NO_FILE) {
-                if (trim((string) env('GOOGLE_SHEETS_CREDENTIALS', '')) !== '') {
+                if (trim((string) env(config('GoogleSheets')->credentialsEnvironment(Modules::current()), '')) !== '') {
                     throw new DomainException('The service-account key is managed by this server. Ask its administrator to replace it.');
                 }
                 if (!$file->isValid() || $file->getSize() > 65536 || strtolower($file->getClientExtension()) !== 'json') {
@@ -42,19 +43,19 @@ class Sheets extends BaseController
                 @chmod($temporaryKey, 0600);
                 unset($json);
             }
-            $sync = new GoogleSheetsSync();
+            $sync = new GoogleSheetsSync(null, null, null, Modules::current());
             $sync->configure($this->request->getPost(), (int) session('user_id'));
             if ($temporaryKey !== null) {
-                if (!@rename($temporaryKey, config('GoogleSheets')->credentialsPath())) {
+                if (!@rename($temporaryKey, config('GoogleSheets')->credentialsPath(Modules::current()))) {
                     throw new DomainException('Settings were saved, but the server could not replace the service-account key. Check writable folder permissions.');
                 }
                 $temporaryKey = null;
             }
-            return redirect()->to(site_url('admin/sheets'))->with('success', 'Connection settings saved. Share the file with the service-account email shown below, then choose Refresh now.');
+            return redirect()->to(Modules::url('admin/sheets'))->with('success', 'Connection settings saved. Share the file with the service-account email shown below, then choose Refresh now.');
         } catch (DomainException $e) {
-            return redirect()->to(site_url('admin/sheets'))->with('error', $e->getMessage());
+            return redirect()->to(Modules::url('admin/sheets'))->with('error', $e->getMessage());
         } catch (Throwable $e) {
-            return redirect()->to(site_url('admin/sheets'))->with('error', 'The Google Sheets settings could not be saved. Please try again.');
+            return redirect()->to(Modules::url('admin/sheets'))->with('error', 'The Google Sheets settings could not be saved. Please try again.');
         } finally {
             if (is_string($temporaryKey) && is_file($temporaryKey)) {
                 @unlink($temporaryKey);
@@ -65,21 +66,21 @@ class Sheets extends BaseController
     public function refresh()
     {
         try {
-            $result = (new GoogleSheetsSync())->sync(true);
+            $result = (new GoogleSheetsSync(null, null, null, Modules::current()))->sync(true);
             if ($result['state'] === 'disabled') {
-                return redirect()->to(site_url('admin/sheets'))->with('error', 'Enable the connection and save settings before refreshing.');
+                return redirect()->to(Modules::url('admin/sheets'))->with('error', 'Enable the connection and save settings before refreshing.');
             }
             if ($result['state'] === 'busy') {
-                return redirect()->to(site_url('admin/sheets'))->with('success', 'A refresh is already running. Check the dashboard shortly.');
+                return redirect()->to(Modules::url('admin/sheets'))->with('success', 'A refresh is already running. Check the dashboard shortly.');
             }
             $message = $result['state'] === 'unchanged' ? 'Google Sheets checked. Your report is already up to date.'
                 : 'Google Sheets refreshed: ' . number_format($result['row_count']) . ' responses. '
                     . number_format($result['duplicate_count']) . ' identical duplicate entries skipped.';
-            return redirect()->to(site_url('dashboard') . '?import=' . $result['import_id'])->with('success', $message);
+            return redirect()->to(Modules::url('dashboard') . '?import=' . $result['import_id'])->with('success', $message);
         } catch (DomainException $e) {
-            return redirect()->to(site_url('admin/sheets'))->with('error', $e->getMessage());
+            return redirect()->to(Modules::url('admin/sheets'))->with('error', $e->getMessage());
         } catch (Throwable $e) {
-            return redirect()->to(site_url('admin/sheets'))->with('error', 'Google Sheets could not be refreshed. The last successful report is still available.');
+            return redirect()->to(Modules::url('admin/sheets'))->with('error', 'Google Sheets could not be refreshed. The last successful report is still available.');
         }
     }
 
@@ -87,7 +88,7 @@ class Sheets extends BaseController
     public function due()
     {
         try {
-            $sync = new GoogleSheetsSync();
+            $sync = new GoogleSheetsSync(null, null, null, Modules::current());
             $status = $sync->status();
             if (!$status['configured']) {
                 $result = ['state' => 'not_configured', 'import_id' => null];

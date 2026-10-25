@@ -5,5 +5,5 @@
 <p>This PHP server accepts requests up to <strong><?= esc($limit) ?></strong>. PHP discarded the uploaded file and form fields. No report was imported.</p>
 <p>For local development, stop the server with Ctrl+C and run <code>.\start.ps1</code> from the folder containing <code>spark</code>. This enables 128 MB file uploads and 130 MB requests.</p>
 <p>Then refresh the upload page and select your workbook again.</p>
-<p><a href="<?= site_url('admin/uploads') ?>">Return to Upload reports</a></p>
+<p><a href="<?= \App\Libraries\Modules::url('admin/uploads') ?>">Return to Upload reports</a></p>
 </body></html>

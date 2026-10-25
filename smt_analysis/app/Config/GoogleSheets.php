@@ -11,9 +11,16 @@ class GoogleSheets extends BaseConfig
     public string $requiredSheetName = 'Raw Data CSAT';
     public int $defaultRefreshMinutes = 15;
 
-    public function credentialsPath(): string
+    public function credentialsEnvironment(string $module = 'shopee-food'): string
     {
-        $path = trim((string) env('GOOGLE_SHEETS_CREDENTIALS', ''));
-        return $path !== '' ? $path : WRITEPATH . 'private/google-service-account.json';
+        return \App\Libraries\Modules::validate($module) === 'marketplace'
+            ? 'MARKETPLACE_GOOGLE_SHEETS_CREDENTIALS' : 'GOOGLE_SHEETS_CREDENTIALS';
+    }
+
+    public function credentialsPath(string $module = 'shopee-food'): string
+    {
+        $path = trim((string) env($this->credentialsEnvironment($module), ''));
+        $filename = $module === 'marketplace' ? 'marketplace-google-service-account.json' : 'google-service-account.json';
+        return $path !== '' ? $path : WRITEPATH . 'private/' . $filename;
     }
 }

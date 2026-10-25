@@ -10,10 +10,18 @@
     <link rel="stylesheet" href="<?= base_url('assets/enhancements.css') ?>?v=<?= filemtime(FCPATH . 'assets/enhancements.css') ?>">
     <link rel="stylesheet" href="<?= base_url('assets/dsat.css') ?>?v=<?= filemtime(FCPATH . 'assets/dsat.css') ?>">
     <link rel="stylesheet" href="<?= base_url('assets/sheets.css') ?>?v=<?= filemtime(FCPATH . 'assets/sheets.css') ?>">
+    <link rel="stylesheet" href="<?= base_url('assets/modules.css') ?>?v=<?= filemtime(FCPATH . 'assets/modules.css') ?>">
     <script src="<?= base_url('assets/workspace.js') ?>?v=<?= filemtime(FCPATH . 'assets/workspace.js') ?>" defer></script>
 </head>
 <body>
-<?php $currentUser = session('user'); $path = trim(uri_string(), '/'); ?>
+<?php
+$currentUser = session('user');
+$path = trim(uri_string(), '/');
+$modulePath = preg_replace('~^marketplace(?:/|$)~', '', $path);
+$chooser = $path === '';
+$globalPage = $path === 'admin/users';
+$moduleLabel = \App\Libraries\Modules::label();
+?>
 <?php ob_start(); ?>
 <div class="appearance-controls" role="group" aria-label="Appearance">
     <button class="theme-toggle" id="theme-toggle" type="button" title="Switch appearance"><span class="theme-icon" aria-hidden="true">☾</span><span class="theme-label">Dark mode</span></button>
@@ -24,24 +32,23 @@
 <?php if ($currentUser): ?>
 <aside class="sidebar">
     <a class="brand brand-logo" href="<?= site_url('/') ?>" aria-label="Summit Analytics home"><img src="<?= base_url('assets/images/summit-logo.png') ?>" alt="Summit" width="136" height="50"><span class="brand-caption">CSAT ANALYTICS</span></a>
-    <p class="nav-caption">WORKSPACE</p>
+    <p class="nav-caption"><?= $chooser || $globalPage ? 'WORKSPACE' : esc(mb_strtoupper($moduleLabel)) ?></p>
+    <?php if ($currentUser['role'] === 'admin'): ?>
     <button class="nav-toggle" id="nav-toggle" type="button" aria-expanded="false" aria-controls="workspace-navigation" aria-label="Open navigation" hidden><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg><span>Menu</span></button>
     <nav id="workspace-navigation" aria-label="Main navigation">
-        <?php $overviewActive = in_array($path, ['', 'dashboard'], true) || str_starts_with($path, 'admin/agents/'); ?>
-        <a class="<?= $overviewActive ? 'active' : '' ?>" <?= $overviewActive ? 'aria-current="page"' : '' ?> href="<?= site_url('dashboard') ?>"><svg aria-hidden="true" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg> Overview</a>
-        <?php if ($currentUser['role'] === 'admin'): ?>
-        <a class="<?= $path === 'admin/sheets' ? 'active' : '' ?>" <?= $path === 'admin/sheets' ? 'aria-current="page"' : '' ?> href="<?= site_url('admin/sheets') ?>"><svg aria-hidden="true" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M4 9h16M4 15h16M10 9v12"/></svg> Google Sheets</a>
-        <a class="<?= $path === 'admin/uploads' ? 'active' : '' ?>" <?= $path === 'admin/uploads' ? 'aria-current="page"' : '' ?> href="<?= site_url('admin/uploads') ?>"><svg aria-hidden="true" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V3m-5 5 5-5 5 5M4 15v5a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-5"/></svg> Upload reports</a>
+        <a class="<?= $chooser ? 'active' : '' ?>" <?= $chooser ? 'aria-current="page"' : '' ?> href="<?= site_url('/') ?>"><svg aria-hidden="true" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="7" height="16" rx="2"/><rect x="14" y="4" width="7" height="16" rx="2"/></svg> Modules</a>
+        <a class="<?= $modulePath === 'admin/sheets' ? 'active' : '' ?>" <?= $modulePath === 'admin/sheets' ? 'aria-current="page"' : '' ?> href="<?= \App\Libraries\Modules::url('admin/sheets') ?>"><svg aria-hidden="true" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M4 9h16M4 15h16M10 9v12"/></svg> Google Sheets</a>
+        <a class="<?= $modulePath === 'admin/uploads' ? 'active' : '' ?>" <?= $modulePath === 'admin/uploads' ? 'aria-current="page"' : '' ?> href="<?= \App\Libraries\Modules::url('admin/uploads') ?>"><svg aria-hidden="true" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V3m-5 5 5-5 5 5M4 15v5a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-5"/></svg> Upload reports</a>
         <a class="<?= $path === 'admin/users' ? 'active' : '' ?>" <?= $path === 'admin/users' ? 'aria-current="page"' : '' ?> href="<?= site_url('admin/users') ?>"><svg aria-hidden="true" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3M16 5a3 3 0 0 1 0 6m2 4a5 5 0 0 1 3 4v2"/></svg> Manage users</a>
-        <?php endif ?>
     </nav>
-    <div class="sidebar-note"><span class="status-dot"></span> CSAT workspace<p>Connected feedback.<br>A clearer view of your service.</p></div>
+    <?php endif ?>
+    <div class="sidebar-note"><span class="status-dot"></span> <?= $chooser || $globalPage ? 'CSAT workspace' : esc($moduleLabel) ?><p>Connected feedback.<br>A clearer view of your service.</p></div>
     <div class="profile"><span class="avatar"><?= esc(mb_strtoupper(mb_substr($currentUser['name'], 0, 1))) ?></span><div><strong><?= esc($currentUser['name']) ?></strong><small><?= $currentUser['role'] === 'admin' ? 'Administrator' : 'Viewer' ?></small></div></div>
     <form class="signout-form" action="<?= site_url('logout') ?>" method="post"><?= csrf_field() ?><button class="signout" type="submit" aria-label="Sign out" title="Sign out"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H5v14h4M9 12h12m-4-4 4 4-4 4"/></svg><span>Sign out</span></button></form>
 </aside>
 <?php endif ?>
 <main class="<?= $currentUser ? 'main' : 'auth-main' ?>" id="main-content" tabindex="-1">
-    <?php if ($currentUser): ?><header class="topbar"><span class="breadcrumb">Workspace <span class="muted">/</span> <strong><?= esc($title) ?></strong></span><div class="topbar-actions"><span class="access-badge"><?= $currentUser['role'] === 'admin' ? 'Admin access' : 'View access' ?></span><?= $appearanceControls ?></div></header><?php endif ?>
+    <?php if ($currentUser): ?><header class="topbar"><span class="breadcrumb"><?= $chooser || $globalPage ? 'Workspace' : '<span class="module-context">' . esc($moduleLabel) . '</span>' ?> <span class="muted">/</span> <strong><?= esc($title) ?></strong></span><div class="topbar-actions"><span class="access-badge"><?= $currentUser['role'] === 'admin' ? 'Admin access' : 'View access' ?></span><?= $appearanceControls ?></div></header><?php endif ?>
     <div class="<?= $currentUser ? 'content' : '' ?>">
         <?php foreach (['error', 'success'] as $flash): ?>
             <?php if (session()->getFlashdata($flash)): ?><div role="alert" class="notice <?= $flash ?>"><?= esc(session()->getFlashdata($flash)) ?></div><?php endif ?>

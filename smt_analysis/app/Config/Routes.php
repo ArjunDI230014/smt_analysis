@@ -10,7 +10,7 @@ $routes->get('register', 'Registration::index');
 $routes->post('register', 'Registration::complete');
 $routes->post('logout', 'Auth::logout', ['filter' => 'auth']);
 $routes->group('', ['filter' => 'auth'], static function ($routes) {
-    $routes->get('/', 'Dashboard::index');
+    $routes->get('/', 'Home::index');
     $routes->get('dashboard', 'Dashboard::index');
     $routes->post('sheets/refresh', 'Sheets::due');
 });
@@ -31,4 +31,22 @@ $routes->group('admin', ['filter' => 'auth:admin'], static function ($routes) {
     $routes->post('users/(:num)/archive', 'Users::archive/$1');
     $routes->post('users/(:num)/restore', 'Users::restore/$1');
     $routes->post('users/(:num)/delete', 'Users::delete/$1');
+});
+
+// Marketplace shares the reporting tools while keeping routes, settings, and reports scoped.
+$routes->group('marketplace', ['filter' => 'auth'], static function ($routes) {
+    $routes->get('/', 'Dashboard::index');
+    $routes->get('dashboard', 'Dashboard::index');
+    $routes->post('sheets/refresh', 'Sheets::due');
+});
+$routes->group('marketplace/admin', ['filter' => 'auth:admin'], static function ($routes) {
+    $routes->get('sheets', 'Sheets::index');
+    $routes->post('sheets', 'Sheets::save');
+    $routes->post('sheets/refresh', 'Sheets::refresh');
+    $routes->get('agents/(:num)', 'Dashboard::agent/$1');
+    $routes->get('uploads', 'Uploads::index');
+    $routes->post('uploads', 'Uploads::store');
+    $routes->post('uploads/(:num)/archive', 'Uploads::archive/$1');
+    $routes->post('uploads/(:num)/restore', 'Uploads::restore/$1');
+    $routes->post('uploads/(:num)/delete', 'Uploads::delete/$1');
 });

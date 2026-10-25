@@ -14,6 +14,11 @@ class DailyCsatImporter
     public const MAX_BYTES = 128 * 1024 * 1024;
     private array $readStats = [];
 
+    public function __construct(private string $module = 'shopee-food')
+    {
+        $this->module = Modules::validate($module);
+    }
+
     public function read(string $path): array
     {
         $this->readStats = (new RawCsatWorkbookReader())->read($path);
@@ -31,7 +36,7 @@ class DailyCsatImporter
         if (!is_file($path)) { throw new DomainException('Choose a readable .xlsx workbook.'); }
         $hash = hash_file('sha256', $path);
         if ($hash === false) { throw new DomainException('The workbook could not be read.'); }
-        if ($db->table('imports')->where('file_hash', $hash)->countAllResults() > 0) {
+        if ($db->table('imports')->where('module', $this->module)->where('file_hash', $hash)->countAllResults() > 0) {
             throw new DomainException('This exact workbook has already been imported. Open its existing report from Uploads.');
         }
         $rows = $this->read($path);
@@ -40,7 +45,7 @@ class DailyCsatImporter
         try {
             $db->table('imports')->insert([
                 'filename' => mb_substr(basename(str_replace('\\', '/', $filename)), 0, 255),
-                'file_hash' => $hash, 'uploaded_by' => $userId, 'row_count' => count($rows),
+                'file_hash' => $hash, 'module' => $this->module, 'uploaded_by' => $userId, 'row_count' => count($rows),
                 'date_from' => min($dates), 'date_to' => max($dates), 'created_at' => date('Y-m-d H:i:s'),
             ]);
             $importId = (int) $db->insertID();

@@ -6,6 +6,8 @@ Administrators choose **Shopee Food** or **Marketplace** on the main page to ope
 
 Master workbooks up to **128 MB** are supported. Identical survey IDs count once; the source’s **Inclulde in CSAT?** flag controls eligibility. Recorded reason codes are decoded to their source labels, including multiple reasons per DSAT. Missing reasons and customer comments remain explicitly unavailable.
 
+Dropdowns and calendar popups follow the light or dark appearance throughout the app. Long dropdowns include option search; calendars support arrow keys, Page Up/Down, Today, and Clear while keeping dates editable by hand. Use the appearance button to switch between light and dark mode.
+
 See **[SETUP.md](SETUP.md)** for startup, account creation, upload requirements, and tests. Use XAMPP Apache at **http://localhost/smt_analysis/**, or **http://192.168.1.5/smt_analysis/** from another device on your network. See SETUP.md for firewall and startup details.
 
 ---

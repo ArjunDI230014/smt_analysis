@@ -13,6 +13,9 @@
     <link rel="stylesheet" href="<?= base_url('assets/agent-performance.css') ?>?v=<?= filemtime(FCPATH . 'assets/agent-performance.css') ?>">
     <link rel="stylesheet" href="<?= base_url('assets/sheets.css') ?>?v=<?= filemtime(FCPATH . 'assets/sheets.css') ?>">
     <link rel="stylesheet" href="<?= base_url('assets/modules.css') ?>?v=<?= filemtime(FCPATH . 'assets/modules.css') ?>">
+    <link rel="stylesheet" href="<?= base_url('assets/controls.css') ?>?v=<?= filemtime(FCPATH . 'assets/controls.css') ?>">
+    <script src="<?= base_url('assets/select-controls.js') ?>?v=<?= filemtime(FCPATH . 'assets/select-controls.js') ?>" defer></script>
+    <script src="<?= base_url('assets/date-controls.js') ?>?v=<?= filemtime(FCPATH . 'assets/date-controls.js') ?>" defer></script>
     <script src="<?= base_url('assets/workspace.js') ?>?v=<?= filemtime(FCPATH . 'assets/workspace.js') ?>" defer></script>
 </head>
 <body>

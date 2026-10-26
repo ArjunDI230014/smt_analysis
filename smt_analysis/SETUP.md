@@ -207,6 +207,8 @@ For browser checks of themed form controls, run `node tests/form-controls.browse
 
 Run `node tests/theme-transition.browser.cjs` with the same browser setup to verify theme fades, chart synchronization, rapid toggles, the CSS fallback, and reduced-motion preferences.
 
+Run `node tests/users.browser.cjs` with PHP and the same Playwright setup to check the user directory, account dialogs, validation, live filters, pagination, keyboard controls, and mobile layouts. It renders the real views with synthetic accounts and does not connect to the application database. Screenshots are saved under `build/`.
+
 The optional `tests/smoke_http.py` checks the real HTTP upload/login flow against a **separate** `writable/csat-smoke.sqlite` database. The `CsatSmokeSeeder` refuses to seed any other database. Its example.test accounts are testing fixtures, not application credentials. Do not expose that test database or use its accounts in production.
 
 Implementation reference: [Chart.js integration](https://www.chartjs.org/docs/latest/getting-started/integration).

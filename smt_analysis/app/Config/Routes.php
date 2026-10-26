@@ -26,6 +26,7 @@ $routes->group('admin', ['filter' => 'auth:admin'], static function ($routes) {
     $routes->post('uploads/(:num)/delete', 'Uploads::delete/$1');
     $routes->get('users', 'Users::index');
     $routes->post('users', 'Users::store');
+    $routes->post('users/(:num)/update', 'Users::update/$1');
     $routes->post('users/(:num)/toggle', 'Users::toggle/$1');
     $routes->post('users/(:num)/password', 'Users::password/$1');
     $routes->post('users/(:num)/archive', 'Users::archive/$1');

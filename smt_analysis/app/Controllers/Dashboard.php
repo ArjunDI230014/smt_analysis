@@ -3,7 +3,6 @@
 namespace App\Controllers;
 
 use App\Libraries\CsatReport;
-use App\Libraries\GoogleSheetsSync;
 use App\Libraries\Modules;
 use DomainException;
 
@@ -30,7 +29,6 @@ class Dashboard extends BaseController
 
     public function index()
     {
-        $googleSheets = (new GoogleSheetsSync(null, null, null, Modules::current()))->status();
         $imports = db_connect()->table('imports')->where('module', Modules::current())->where('archived', 0)->orderBy('id', 'DESC')->get()->getResultArray();
         $input = $this->request->getGet();
         // Older pagination links did not include a section; keep those links useful.
@@ -51,9 +49,8 @@ class Dashboard extends BaseController
         } catch (DomainException $e) {
             return redirect()->to(Modules::url('dashboard'))->with('error', $e->getMessage());
         }
-        $connectedId = $googleSheets['source']['import_id'] ?? null;
         $availableIds = array_column($imports, 'id');
-        $selected = $input['import'] ?? ($connectedId && in_array($connectedId, $availableIds) ? $connectedId : ($imports[0]['id'] ?? null));
+        $selected = $input['import'] ?? ($imports[0]['id'] ?? null);
         $import = null;
         foreach ($imports as $candidate) {
             if (is_scalar($selected) && (string) $candidate['id'] === (string) $selected) {
@@ -71,6 +68,6 @@ class Dashboard extends BaseController
                 ->select('COUNT(*) AS row_count, MIN(response_date) AS date_from, MAX(response_date) AS date_to', false)->get()->getRowArray();
             $import = array_merge($import, $owned);
         }
-        return view('dashboard/index', array_merge($data, compact('imports', 'import', 'filters', 'personal', 'googleSheets'), ['title' => 'CSAT overview']));
+        return view('dashboard/index', array_merge($data, compact('imports', 'import', 'filters', 'personal'), ['title' => 'CSAT overview']));
     }
 }

@@ -57,7 +57,7 @@ class GoogleSheetsRows
         foreach (['reason_column', 'comment_column', 'case_column'] as $field) {
             $mapped = trim((string) ($mappings[$field] ?? ''));
             if ($mapped !== '' && !in_array($mapped, $headers, true)) {
-                throw new DomainException('A mapped reason, comment, or case column was not found. Match its heading exactly in Google Sheets settings.');
+                throw new DomainException('A mapped reason, comment, or case column was not found. Check the source workbook headings.');
             }
         }
         $lastNamedColumn = max(array_keys($headers));
@@ -180,7 +180,7 @@ class GoogleSheetsRows
             $fingerprint = hash('sha256', json_encode($fingerprint, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE));
             if (isset($ids[$id])) {
                 if ($ids[$id] !== $fingerprint) {
-                    throw new DomainException("Row {$sourceRow}: csat_id conflicts with an earlier row. Keep one correct record per CSAT ID in Google Sheets, then retry.");
+                    throw new DomainException("Row {$sourceRow}: csat_id conflicts with an earlier row. Keep one correct record per CSAT ID in the workbook, then retry.");
                 }
                 $duplicates++;
                 continue;
@@ -211,7 +211,7 @@ class GoogleSheetsRows
     private function identifier(mixed $value, int $row, string $column, int $max, bool $required): string
     {
         if ((is_float($value) || is_int($value)) && (!is_finite((float) $value) || abs((float) $value) > 9007199254740991 || floor((float) $value) !== (float) $value)) {
-            throw new DomainException("Row {$row}: {$column} must be stored as plain text in Google Sheets to preserve its exact digits.");
+            throw new DomainException("Row {$row}: {$column} must be stored as plain text to preserve its exact digits.");
         }
         // PHP's default float string conversion may use only 14 significant digits.
         // Every validated integer up to 2^53 - 1 has an exact decimal representation.

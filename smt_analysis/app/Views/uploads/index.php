@@ -2,6 +2,11 @@
 <?= $this->section('content') ?>
 <?php $workbookLimit = \App\Libraries\UploadLimits::label(\App\Libraries\DailyCsatImporter::MAX_BYTES); ?>
 <div class="page-heading"><div><p class="eyebrow">REPORT LIBRARY</p><h1>From spreadsheet to insight.</h1><p class="muted">Upload the master workbook to create a new dashboard snapshot.</p></div><span class="sheet-badge">Admin workspace</span></div>
+<nav class="module-switcher" aria-label="Choose report module">
+<?php foreach (\App\Libraries\Modules::all() as $moduleKey => $moduleLabel): ?>
+    <a class="<?= \App\Libraries\Modules::current() === $moduleKey ? 'active' : '' ?>" <?= \App\Libraries\Modules::current() === $moduleKey ? 'aria-current="page"' : '' ?> href="<?= esc(\App\Libraries\Modules::url('admin/uploads', $moduleKey)) ?>"><?= esc($moduleLabel) ?></a>
+<?php endforeach ?>
+</nav>
 <?php if ($uploadLimit['limited']): ?><div class="notice error">This server currently allows files up to <strong><?= esc($uploadLimit['label']) ?></strong>. The app supports <?= esc($workbookLimit) ?> workbooks. Ask your administrator to update this server’s PHP upload settings; for the development server, restart it using <code>.\start.ps1</code>.</div><?php endif ?>
 <section class="upload-grid">
     <form class="panel upload-panel" method="post" action="<?= \App\Libraries\Modules::url('admin/uploads') ?>" enctype="multipart/form-data" id="upload-form" data-max-bytes="<?= $uploadLimit['bytes'] ?>" data-max-label="<?= esc($uploadLimit['label']) ?>" data-sheet-name="Raw Data CSAT">

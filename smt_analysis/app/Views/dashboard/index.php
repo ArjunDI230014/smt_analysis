@@ -2,9 +2,13 @@
 <?= $this->section('content') ?>
 <?php $period = $filters['period'] ?? 'daily'; $periodLabel = ['daily' => 'Daily', 'weekly' => 'Weekly', 'monthly' => 'Monthly'][$period] ?? 'Daily'; $tab = $filters['tab'] ?? 'statistics'; ?>
 <div class="page-heading"><div><p class="eyebrow">CUSTOMER SATISFACTION</p><h1>Your service, at a glance.</h1><p class="muted">Explore the feedback behind every customer interaction.</p></div><?php if (session('user')['role'] === 'admin'): ?><a class="button" href="<?= \App\Libraries\Modules::url('admin/uploads') ?>">＋ Upload report</a><?php endif ?></div>
-<?php if (isset($googleSheets)): ?><?= view('sheets/status', ['googleSheets' => $googleSheets, 'personal' => $personal]) ?><?php endif ?>
+<nav class="module-switcher" aria-label="Choose report module">
+<?php foreach (\App\Libraries\Modules::all() as $moduleKey => $moduleLabel): ?>
+    <a class="<?= \App\Libraries\Modules::current() === $moduleKey ? 'active' : '' ?>" <?= \App\Libraries\Modules::current() === $moduleKey ? 'aria-current="page"' : '' ?> href="<?= esc(\App\Libraries\Modules::url('dashboard', $moduleKey)) ?>"><?= esc($moduleLabel) ?></a>
+<?php endforeach ?>
+</nav>
 <?php if (!$import): ?>
-<section class="panel empty"><span class="empty-icon">▥</span><h2>Your first insight starts here</h2><p>Connect Google Sheets or upload a workbook to see scores, DSAT reasons, and daily, weekly, or monthly performance.</p><?php if (session('user')['role'] === 'admin'): ?><a class="button" href="<?= \App\Libraries\Modules::url('admin/uploads') ?>">Upload a report →</a><?php else: ?><p class="muted">Your administrator can connect the sheet or upload the first report.</p><?php endif ?></section>
+<section class="panel empty"><span class="empty-icon">▥</span><h2>Your first insight starts here</h2><p>Upload a workbook to see scores, DSAT reasons, and daily, weekly, or monthly performance.</p><?php if (session('user')['role'] === 'admin'): ?><a class="button" href="<?= \App\Libraries\Modules::url('admin/uploads') ?>">Upload a report →</a><?php else: ?><p class="muted">Your administrator can upload the first report.</p><?php endif ?></section>
 <?php else: ?>
 <form class="panel filters" id="dashboard-filters" method="get" action="<?= \App\Libraries\Modules::url('dashboard') ?>" data-report-from="<?= esc($import['date_from']) ?>" data-report-to="<?= esc($import['date_to']) ?>" data-report-id="<?= $import['id'] ?>">
     <input type="hidden" name="tab" value="<?= esc($tab) ?>">

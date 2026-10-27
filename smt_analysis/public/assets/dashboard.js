@@ -4,7 +4,7 @@
     const count = value => Number(value).toLocaleString();
     const percent = value => value === null || value === undefined ? '—' : Number(value).toFixed(2) + '%';
     const palette = () => {
-        const styles = getComputedStyle(document.documentElement);
+        const styles = getComputedStyle(document.querySelector('.csat-dashboard') || document.documentElement);
         const color = (name, fallback) => styles.getPropertyValue(name).trim() || fallback;
         return {
             text: color('--chart-text', '#60706a'),
@@ -14,6 +14,7 @@
             negative: color('--chart-negative', '#c45f4b'),
             surface: color('--surface', '#ffffff'),
             ink: color('--ink', '#203b35'),
+            reasons: ['#3185df', '#18a795', '#ffb82e', '#f15b58', '#8060d2', '#59b4ce', '#8ebf55', '#ee7f42'],
         };
     };
     const fillColor = color => /^#[a-f\d]{6}$/i.test(color) ? color + '18' : color;
@@ -43,6 +44,9 @@
             if (kind === 'mix') {
                 datasets[0].backgroundColor = [colors.positive, colors.negative];
                 datasets[0].borderColor = colors.surface;
+            } else if (kind === 'reasons') {
+                datasets[0].backgroundColor = colors.reasons;
+                datasets[0].borderColor = colors.surface;
             } else if (kind === 'channel') {
                 datasets[0].backgroundColor = colors.positive;
                 datasets[1].backgroundColor = colors.negative;
@@ -60,7 +64,7 @@
         if (!data || !error) return;
         if (!window.Chart) { error.hidden = false; return; }
         try {
-            const { summary, groups, period = 'daily' } = JSON.parse(data.textContent);
+            const { summary, groups, dsatReasons = [], period = 'daily' } = JSON.parse(data.textContent);
             const periodName = { daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly' }[period] || 'Daily';
             const periodUnit = { daily: 'days', weekly: 'weeks beginning Monday', monthly: 'calendar months' }[period] || 'days';
             const ratedTotal = Number(summary.good) + Number(summary.bad);
@@ -108,6 +112,15 @@
                 data: { labels: groups.channels.map(row => row.label), datasets: [{ label: 'Good', data: groups.channels.map(row => Number(row.good)), backgroundColor: colors.positive, borderRadius: 4, maxBarThickness: 50 }, { label: 'Bad', data: groups.channels.map(row => Number(row.bad)), backgroundColor: colors.negative, borderRadius: 4, maxBarThickness: 50 }] },
                 options: { ...base({ label: context => `${context.dataset.label}: ${count(context.parsed.y)} responses` }, true), scales: { x: { ...labelsAxis(), stacked: true }, y: { beginAtZero: true, stacked: true, grid: { color: colors.grid }, border: { display: false }, ticks: { color: colors.text, precision: 0 } } } },
             }, `Good and Bad response totals across ${count(groups.channels.length)} submission channels.`);
+
+            if (dsatReasons.length) {
+                const reasons = dsatReasons.slice(0, 8);
+                create('reason-chart', 'reasons', {
+                    type: 'doughnut',
+                    data: { labels: reasons.map(row => row.reason || 'Reason not provided'), datasets: [{ data: reasons.map(row => Number(row.count)), backgroundColor: colors.reasons, borderWidth: 3, borderColor: colors.surface, borderRadius: 4 }] },
+                    options: { ...base({ label: context => `${context.label}: ${count(context.parsed)} recorded reasons` }, true), cutout: '66%', interaction: { mode: 'nearest', intersect: true } },
+                }, `Top ${count(reasons.length)} recorded reasons for Bad ratings.`);
+            }
             error.hidden = true;
         } catch (_) {
             window.destroyDashboardCharts();

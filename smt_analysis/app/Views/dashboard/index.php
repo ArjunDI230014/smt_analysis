@@ -1,7 +1,8 @@
 <?= $this->extend('layout') ?>
 <?= $this->section('content') ?>
 <?php $period = $filters['period'] ?? 'daily'; $periodLabel = ['daily' => 'Daily', 'weekly' => 'Weekly', 'monthly' => 'Monthly'][$period] ?? 'Daily'; $tab = $filters['tab'] ?? 'statistics'; ?>
-<div class="page-heading"><div><p class="eyebrow">CUSTOMER SATISFACTION</p><h1>Your service, at a glance.</h1><p class="muted">Explore the feedback behind every customer interaction.</p></div><?php if (session('user')['role'] === 'admin'): ?><a class="button" href="<?= \App\Libraries\Modules::url('admin/uploads') ?>">＋ Upload report</a><?php endif ?></div>
+<div class="csat-dashboard">
+<div class="page-heading"><div><p class="eyebrow"><?= esc(mb_strtoupper(\App\Libraries\Modules::label())) ?> · CUSTOMER SATISFACTION</p><h1><?= esc(\App\Libraries\Modules::label()) ?> CSAT Dashboard</h1><p class="muted">Monitor satisfaction, explore DSAT reasons, and understand service performance.</p></div><?php if (session('user')['role'] === 'admin'): ?><a class="button" href="<?= \App\Libraries\Modules::url('admin/uploads') ?>">＋ Upload report</a><?php endif ?></div>
 <nav class="module-switcher" aria-label="Choose report module">
 <?php foreach (\App\Libraries\Modules::all() as $moduleKey => $moduleLabel): ?>
     <a class="<?= \App\Libraries\Modules::current() === $moduleKey ? 'active' : '' ?>" <?= \App\Libraries\Modules::current() === $moduleKey ? 'aria-current="page"' : '' ?> href="<?= esc(\App\Libraries\Modules::url('dashboard', $moduleKey)) ?>"><?= esc($moduleLabel) ?></a>
@@ -47,10 +48,12 @@
 <?= view('dashboard/quick-views', compact('filters', 'import')) ?>
 <div class="section-heading"><h2>Performance overview</h2><span class="small muted"><?= number_format($summary['total']) ?> of <?= number_format($import['row_count']) ?> responses</span></div>
 <section class="kpi-grid" aria-label="Key performance indicators">
-    <article class="kpi primary"><div>CSAT score <span>↗</span></div><strong><?= $summary['score'] !== null ? number_format($summary['score'], 2) . '<small>%</small>' : '—' ?></strong><p>Good ÷ (Good + Bad)</p></article>
-    <article class="kpi"><div>Total responses <span class="metric-symbol">▤</span></div><strong><?= number_format($summary['total']) ?></strong><p>Within the selected filters</p></article>
-    <article class="kpi"><div>Good ratings <span class="metric-symbol positive">＋</span></div><strong><?= number_format($summary['good']) ?></strong><p><span class="legend-dot green"></span> Positive customer feedback</p></article>
-    <article class="kpi"><div>Bad ratings <span class="metric-symbol negative">−</span></div><strong><?= number_format($summary['bad']) ?></strong><p><span class="legend-dot orange"></span> Opportunities to improve</p></article>
+    <article class="kpi dashboard-kpi"><div><span class="kpi-icon responses" aria-hidden="true">▤</span>Total responses</div><strong><?= number_format($summary['total']) ?></strong><p>Within the selected filters</p></article>
+    <article class="kpi dashboard-kpi"><div><span class="kpi-icon csat" aria-hidden="true">✓</span>CSAT score</div><strong><?= $summary['score'] !== null ? number_format($summary['score'], 2) . '<small>%</small>' : '—' ?></strong><p>Good ÷ (Good + Bad)</p></article>
+    <article class="kpi dashboard-kpi"><div><span class="kpi-icon dsat" aria-hidden="true">!</span>DSAT rate</div><strong><?= $summary['dsat_rate'] !== null ? number_format($summary['dsat_rate'], 2) . '<small>%</small>' : '—' ?></strong><p>Bad ÷ (Good + Bad)</p></article>
+    <article class="kpi dashboard-kpi"><div><span class="kpi-icon positive" aria-hidden="true">＋</span>Good ratings</div><strong><?= number_format($summary['good']) ?></strong><p>Positive feedback</p></article>
+    <article class="kpi dashboard-kpi"><div><span class="kpi-icon negative" aria-hidden="true">−</span>Bad ratings</div><strong><?= number_format($summary['bad']) ?></strong><p>Feedback to improve</p></article>
+    <article class="kpi dashboard-kpi"><div><span class="kpi-icon flagged" aria-hidden="true">◷</span>Avg handling</div><strong><?= $summary['handling_count'] > 0 ? number_format($summary['handling'], 1) . '<small>s</small>' : '—' ?></strong><p>Reported handling time</p></article>
 </section>
 <p class="method-note">Inclusion: <strong><?= ['all' => 'All rows', 'included' => 'Included in CSAT', 'excluded' => 'Excluded from CSAT'][$filters['scope']] ?></strong>. <?= number_format($summary['flagged']) ?> matching rows are excluded from CSAT. Scores use response totals, not averages of team percentages.</p>
 <?php if ($tab === 'dsat'): ?>
@@ -62,7 +65,7 @@
 <?php if ($personal): ?>
 <?= view('dashboard/agent-insights', ['summary' => $summary, 'groups' => $groups, 'dsat' => $dsat, 'filters' => $filters, 'personal' => true, 'reasonBaseUrl' => \App\Libraries\Modules::url('dashboard'), 'reasonQuery' => array_merge($filters, ['import' => $import['id'], 'tab' => 'dsat'])]) ?>
 <?php else: ?>
-<?= view('dashboard/charts', compact('period', 'periodLabel', 'groups')) ?>
+<?= view('dashboard/charts', compact('period', 'periodLabel', 'groups', 'dsat', 'agents')) ?>
 <?php endif ?>
 <?php else: ?>
 <?php if ($personal): ?>
@@ -73,6 +76,7 @@
 <?php endif ?>
 </div><footer class="report-footer">Source: <?= esc($import['filename']) ?> · Report snapshot · Imported <?= esc($import['created_at']) ?> (server time)</footer>
 <?php endif ?>
+</div>
 <?= $this->endSection() ?>
 <?= $this->section('scripts') ?>
 <?php if ($import && !$personal): ?>
@@ -81,7 +85,7 @@
 <?php endif ?>
 <?php if ($import): ?>
 <script src="<?= base_url('assets/dashboard-qol.js') ?>" defer></script>
-<script id="report-data" type="application/json"><?= json_encode(['summary' => $summary, 'groups' => $groups, 'period' => $period], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR) ?></script>
+<script id="report-data" type="application/json"><?= json_encode(['summary' => $summary, 'groups' => $groups, 'dsatReasons' => $dsat['reasons'], 'period' => $period], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR) ?></script>
 <script src="<?= base_url('assets/vendor/chart.umd.min.js') ?>" defer></script>
 <script src="<?= base_url('assets/dashboard.js') ?>" defer></script>
 <script src="<?= base_url('assets/agent-performance.js') ?>?v=<?= filemtime(FCPATH . 'assets/agent-performance.js') ?>" defer></script>

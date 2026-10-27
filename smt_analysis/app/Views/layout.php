@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="<?= base_url('assets/agent-performance.css') ?>?v=<?= filemtime(FCPATH . 'assets/agent-performance.css') ?>">
     <link rel="stylesheet" href="<?= base_url('assets/modules.css') ?>?v=<?= filemtime(FCPATH . 'assets/modules.css') ?>">
     <link rel="stylesheet" href="<?= base_url('assets/controls.css') ?>?v=<?= filemtime(FCPATH . 'assets/controls.css') ?>">
+    <link rel="stylesheet" href="<?= base_url('assets/dashboard-visual.css') ?>?v=<?= filemtime(FCPATH . 'assets/dashboard-visual.css') ?>">
     <script src="<?= base_url('assets/select-controls.js') ?>?v=<?= filemtime(FCPATH . 'assets/select-controls.js') ?>" defer></script>
     <script src="<?= base_url('assets/date-controls.js') ?>?v=<?= filemtime(FCPATH . 'assets/date-controls.js') ?>" defer></script>
     <script src="<?= base_url('assets/workspace.js') ?>?v=<?= filemtime(FCPATH . 'assets/workspace.js') ?>" defer></script>
@@ -41,7 +42,7 @@ $moduleLabel = \App\Libraries\Modules::label();
     <button class="nav-toggle" id="nav-toggle" type="button" aria-expanded="false" aria-controls="workspace-navigation" aria-label="Open navigation" hidden><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg><span>Menu</span></button>
     <nav id="workspace-navigation" aria-label="Main navigation">
         <a class="<?= $chooser ? 'active' : '' ?>" <?= $chooser ? 'aria-current="page"' : '' ?> href="<?= site_url('/') ?>"><svg aria-hidden="true" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="7" height="16" rx="2"/><rect x="14" y="4" width="7" height="16" rx="2"/></svg> Modules</a>
-        <?php if (!$chooser && !$globalPage): ?><a class="<?= $modulePath === 'admin/uploads' ? 'active' : '' ?>" <?= $modulePath === 'admin/uploads' ? 'aria-current="page"' : '' ?> href="<?= \App\Libraries\Modules::url('admin/uploads') ?>"><svg aria-hidden="true" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V3m-5 5 5-5 5 5M4 15v5a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-5"/></svg> Upload reports</a><?php endif ?>
+        <a class="<?= $modulePath === 'admin/uploads' ? 'active' : '' ?>" <?= $modulePath === 'admin/uploads' ? 'aria-current="page"' : '' ?> href="<?= \App\Libraries\Modules::url('admin/uploads') ?>"><svg aria-hidden="true" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V3m-5 5 5-5 5 5M4 15v5a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-5"/></svg> Upload reports</a>
         <a class="<?= $path === 'admin/users' ? 'active' : '' ?>" <?= $path === 'admin/users' ? 'aria-current="page"' : '' ?> href="<?= site_url('admin/users') ?>"><svg aria-hidden="true" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3M16 5a3 3 0 0 1 0 6m2 4a5 5 0 0 1 3 4v2"/></svg> Manage users</a>
     </nav>
     <?php endif ?>

@@ -126,3 +126,5 @@ _modules/*
 /phpunit.xml
 /writable/*.sqlite*
 /writable/private/
+
+.env
